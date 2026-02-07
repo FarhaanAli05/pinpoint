@@ -1,0 +1,238 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  HousingUnit,
+  Pin,
+  TrackedPin,
+  TrackerStatus,
+  FitTag,
+  Dealbreaker,
+} from "./types";
+import { SEED_PINS } from "./seed-data";
+
+interface AppState {
+  unit: HousingUnit | null;
+  pins: Pin[];
+  tracked: TrackedPin[];
+  setUnit: (unit: HousingUnit) => void;
+  addMemberToUnit: (member: { budgetMin: number; budgetMax: number; dealbreakers: Dealbreaker[] }) => void;
+  getFitTag: (pin: Pin) => FitTag;
+  getFitReasons: (pin: Pin) => { good: string[]; bad: string[] };
+  trackPin: (pinId: string, status: TrackerStatus) => void;
+  getTrackedStatus: (pinId: string) => TrackerStatus | null;
+  getPinById: (pinId: string) => Pin | undefined;
+}
+
+const AppContext = createContext<AppState | null>(null);
+
+const STORAGE_KEY_UNIT = "pinpoint_unit";
+const STORAGE_KEY_TRACKED = "pinpoint_tracked";
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [unit, setUnitState] = useState<HousingUnit | null>(null);
+  const [tracked, setTracked] = useState<TrackedPin[]>([]);
+  const [pins] = useState<Pin[]>(SEED_PINS);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedUnit = localStorage.getItem(STORAGE_KEY_UNIT);
+      if (savedUnit) setUnitState(JSON.parse(savedUnit));
+      const savedTracked = localStorage.getItem(STORAGE_KEY_TRACKED);
+      if (savedTracked) setTracked(JSON.parse(savedTracked));
+    } catch {
+      // ignore parse errors
+    }
+    setHydrated(true);
+  }, []);
+
+  // Persist unit to localStorage
+  useEffect(() => {
+    if (!hydrated) return;
+    if (unit) {
+      localStorage.setItem(STORAGE_KEY_UNIT, JSON.stringify(unit));
+    } else {
+      localStorage.removeItem(STORAGE_KEY_UNIT);
+    }
+  }, [unit, hydrated]);
+
+  // Persist tracked to localStorage
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY_TRACKED, JSON.stringify(tracked));
+  }, [tracked, hydrated]);
+
+  const setUnit = useCallback((u: HousingUnit) => {
+    setUnitState(u);
+  }, []);
+
+  const addMemberToUnit = useCallback(
+    (member: { budgetMin: number; budgetMax: number; dealbreakers: Dealbreaker[] }) => {
+      setUnitState((prev) => {
+        if (!prev) return prev;
+        const newMember = {
+          id: crypto.randomUUID(),
+          ...member,
+        };
+        const allMembers = [...prev.members, newMember];
+        // Recompute constraints: use the tightest budget intersection and union of dealbreakers
+        const budgetMin = Math.max(...allMembers.map((m) => m.budgetMin));
+        const budgetMax = Math.min(...allMembers.map((m) => m.budgetMax));
+        const allDealbreakers = Array.from(
+          new Set(allMembers.flatMap((m) => m.dealbreakers))
+        ) as Dealbreaker[];
+        return {
+          ...prev,
+          budgetMin,
+          budgetMax,
+          dealbreakers: allDealbreakers,
+          members: allMembers,
+        };
+      });
+    },
+    []
+  );
+
+  const getFitTag = useCallback(
+    (pin: Pin): FitTag => {
+      if (!unit) return "OK";
+      const { good, bad } = computeFit(pin, unit);
+      if (bad.length === 0 && good.length > 0) return "Great";
+      if (bad.length > 0) return "Conflict";
+      return "OK";
+    },
+    [unit]
+  );
+
+  const getFitReasons = useCallback(
+    (pin: Pin): { good: string[]; bad: string[] } => {
+      if (!unit) return { good: [], bad: [] };
+      return computeFit(pin, unit);
+    },
+    [unit]
+  );
+
+  const trackPin = useCallback((pinId: string, status: TrackerStatus) => {
+    setTracked((prev) => {
+      const existing = prev.findIndex((t) => t.pinId === pinId);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = { ...updated[existing], status };
+        return updated;
+      }
+      return [...prev, { pinId, status, addedAt: Date.now() }];
+    });
+  }, []);
+
+  const getTrackedStatus = useCallback(
+    (pinId: string): TrackerStatus | null => {
+      return tracked.find((t) => t.pinId === pinId)?.status ?? null;
+    },
+    [tracked]
+  );
+
+  const getPinById = useCallback(
+    (pinId: string): Pin | undefined => {
+      return pins.find((p) => p.id === pinId);
+    },
+    [pins]
+  );
+
+  return (
+    <AppContext.Provider
+      value={{
+        unit,
+        pins,
+        tracked,
+        setUnit,
+        addMemberToUnit,
+        getFitTag,
+        getFitReasons,
+        trackPin,
+        getTrackedStatus,
+        getPinById,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+export function useApp() {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error("useApp must be used inside AppProvider");
+  return ctx;
+}
+
+// --- Fit computation logic ---
+
+function computeFit(
+  pin: Pin,
+  unit: HousingUnit
+): { good: string[]; bad: string[] } {
+  const good: string[] = [];
+  const bad: string[] = [];
+
+  // Budget check
+  if (pin.type === "room") {
+    if (pin.rent >= unit.budgetMin && pin.rent <= unit.budgetMax) {
+      good.push("Rent is within your budget");
+    } else if (pin.rent > unit.budgetMax) {
+      bad.push(`Rent ($${pin.rent}) exceeds your max budget ($${unit.budgetMax})`);
+    } else {
+      good.push("Rent is below your minimum — could be a great deal");
+    }
+  } else {
+    // Whole unit: divide by number of members (or 1)
+    const perPerson = Math.round(pin.rent / Math.max(unit.members.length, 1));
+    if (perPerson >= unit.budgetMin && perPerson <= unit.budgetMax) {
+      good.push(`Split rent (~$${perPerson}/person) fits your budget`);
+    } else if (perPerson > unit.budgetMax) {
+      bad.push(
+        `Split rent (~$${perPerson}/person) exceeds your max budget ($${unit.budgetMax})`
+      );
+    } else {
+      good.push(`Split rent (~$${perPerson}/person) is a great deal`);
+    }
+  }
+
+  // Move-in date check
+  const pinMonth = pin.moveInDate.slice(0, 7); // "2025-09"
+  if (pinMonth === unit.moveInMonth) {
+    good.push("Move-in date matches perfectly");
+  } else {
+    bad.push(
+      `Move-in is ${pin.moveInDate} but you need ${unit.moveInMonth}`
+    );
+  }
+
+  // Dealbreaker checks
+  if (unit.dealbreakers.includes("pet-free")) {
+    if (pin.features.includes("pet-friendly") || pin.features.includes("pet-free")) {
+      // pet-free listing = good; pet-friendly means pets may be present = conflict
+      if (pin.features.includes("pet-free")) {
+        good.push("Pet-free environment");
+      } else {
+        bad.push("Listing is pet-friendly (you want pet-free)");
+      }
+    }
+  }
+
+  if (unit.dealbreakers.includes("smoking-free")) {
+    if (pin.features.includes("smoking-allowed")) {
+      bad.push("Smoking is allowed (you want smoke-free)");
+    } else if (pin.features.includes("smoking-free")) {
+      good.push("Smoke-free environment");
+    }
+  }
+
+  if (unit.dealbreakers.includes("quiet")) {
+    if (pin.features.includes("quiet")) {
+      good.push("Quiet environment");
+    }
+  }
+
+  return { good, bad };
+}
