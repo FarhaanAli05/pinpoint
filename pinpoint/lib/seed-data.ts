@@ -19,6 +19,8 @@ export const SEED_PINS: Pin[] = [
     bedrooms: 1,
     features: ["quiet", "pet-friendly"],
     externalLink: "https://example.com/listing-1",
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-2",
@@ -33,6 +35,8 @@ export const SEED_PINS: Pin[] = [
     address: "45 Alfred St",
     bedrooms: 2,
     features: ["quiet", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-3",
@@ -47,6 +51,8 @@ export const SEED_PINS: Pin[] = [
     address: "89 Earl St",
     bedrooms: 1,
     features: ["pet-friendly", "smoking-allowed"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-4",
@@ -61,6 +67,8 @@ export const SEED_PINS: Pin[] = [
     address: "210 King St W",
     bedrooms: 3,
     features: ["quiet", "pet-free", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-5",
@@ -75,6 +83,8 @@ export const SEED_PINS: Pin[] = [
     address: "77 Collingwood St",
     bedrooms: 1,
     features: ["quiet", "pet-free", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-6",
@@ -89,6 +99,8 @@ export const SEED_PINS: Pin[] = [
     address: "34 Aberdeen St",
     bedrooms: 1,
     features: ["smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-7",
@@ -104,6 +116,8 @@ export const SEED_PINS: Pin[] = [
     bedrooms: 2,
     features: ["quiet", "pet-free", "smoking-free"],
     externalLink: "https://example.com/listing-7",
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-8",
@@ -118,6 +132,8 @@ export const SEED_PINS: Pin[] = [
     address: "56 Division St",
     bedrooms: 1,
     features: ["pet-friendly", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-9",
@@ -132,6 +148,8 @@ export const SEED_PINS: Pin[] = [
     address: "102 Stuart St",
     bedrooms: 1,
     features: ["quiet", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-10",
@@ -146,6 +164,8 @@ export const SEED_PINS: Pin[] = [
     address: "88 Johnson St",
     bedrooms: 2,
     features: ["pet-free", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-11",
@@ -160,6 +180,8 @@ export const SEED_PINS: Pin[] = [
     address: "145 Bagot St",
     bedrooms: 1,
     features: ["smoking-allowed"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-12",
@@ -174,6 +196,8 @@ export const SEED_PINS: Pin[] = [
     address: "23 Sydenham St",
     bedrooms: 1,
     features: ["quiet", "pet-free", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-13",
@@ -188,6 +212,8 @@ export const SEED_PINS: Pin[] = [
     address: "300 Brock St",
     bedrooms: 4,
     features: ["pet-friendly", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-14",
@@ -202,6 +228,8 @@ export const SEED_PINS: Pin[] = [
     address: "61 Clergy St",
     bedrooms: 1,
     features: ["quiet", "smoking-free"],
+    sourceType: "seeded",
+    createdAt: 0,
   },
   {
     id: "pin-15",
@@ -217,5 +245,7 @@ export const SEED_PINS: Pin[] = [
     bedrooms: 1,
     features: ["quiet", "pet-free", "smoking-free"],
     externalLink: "https://example.com/listing-15",
+    sourceType: "seeded",
+    createdAt: 0,
   },
 ];

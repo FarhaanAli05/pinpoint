@@ -113,16 +113,40 @@ export function PinDetailsDrawer({
           </div>
         )}
 
-        {pin.externalLink && (
-          <a
-            href={pin.externalLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-4 inline-block text-xs text-primary underline"
-          >
-            View original listing
-          </a>
-        )}
+        {/* Listing source / provenance */}
+        <div className="mb-4 rounded-lg border border-border bg-gray-50 p-3">
+          <h3 className="mb-1.5 text-xs font-semibold text-muted uppercase tracking-wide">
+            Listing Source
+          </h3>
+          {pin.externalLink ? (
+            <>
+              <p className="text-xs text-foreground">
+                Imported from:{" "}
+                <span className="font-medium">
+                  {pin.sourceLabel || "External link"}
+                </span>
+              </p>
+              <a
+                href={pin.externalLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-xs text-primary underline"
+              >
+                View original listing
+              </a>
+            </>
+          ) : (
+            <p className="text-xs text-foreground">Manually added listing</p>
+          )}
+          <p className="mt-1 text-xs text-muted">
+            Added by:{" "}
+            {pin.sourceType === "seeded"
+              ? "Demo data"
+              : pin.addedByUnitId
+                ? "Your group"
+                : "A student"}
+          </p>
+        </div>
       </div>
 
       {/* Actions */}

@@ -7,6 +7,7 @@ import { Pin, FitTag } from "@/lib/types";
 import { UnitSummary } from "@/components/UnitSummary";
 import { PinDetailsDrawer } from "@/components/PinDetailsDrawer";
 import { DraftMessageModal } from "@/components/DraftMessageModal";
+import { AddListingModal } from "@/components/AddListingModal";
 
 // Dynamically import map to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -25,6 +26,7 @@ export default function MapPage() {
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const filteredPins = useMemo(() => {
     if (filter === "all") return pins;
@@ -57,6 +59,17 @@ export default function MapPage() {
         ) : (
           <div className="space-y-4 p-4">
             <UnitSummary />
+
+            {/* Add listing CTA */}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/30 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary-light"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M8 3v10M3 8h10" />
+              </svg>
+              Add Listing
+            </button>
 
             {/* Filter controls */}
             {unit && (
@@ -132,6 +145,14 @@ export default function MapPage() {
         <DraftMessageModal
           pin={selectedPin}
           onClose={() => setShowDraftModal(false)}
+        />
+      )}
+
+      {/* Add listing modal */}
+      {showAddModal && (
+        <AddListingModal
+          onClose={() => setShowAddModal(false)}
+          onAdded={(pin) => setSelectedPin(pin)}
         />
       )}
     </div>

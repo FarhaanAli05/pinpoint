@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import {
   HousingUnit,
   Pin,
@@ -17,6 +17,7 @@ interface AppState {
   tracked: TrackedPin[];
   setUnit: (unit: HousingUnit) => void;
   addMemberToUnit: (member: { budgetMin: number; budgetMax: number; dealbreakers: Dealbreaker[] }) => void;
+  addPin: (pin: Pin) => void;
   getFitTag: (pin: Pin) => FitTag;
   getFitReasons: (pin: Pin) => { good: string[]; bad: string[] };
   trackPin: (pinId: string, status: TrackerStatus) => void;
@@ -28,12 +29,16 @@ const AppContext = createContext<AppState | null>(null);
 
 const STORAGE_KEY_UNIT = "pinpoint_unit";
 const STORAGE_KEY_TRACKED = "pinpoint_tracked";
+const STORAGE_KEY_USER_PINS = "pinpoint_user_pins";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [unit, setUnitState] = useState<HousingUnit | null>(null);
   const [tracked, setTracked] = useState<TrackedPin[]>([]);
-  const [pins] = useState<Pin[]>(SEED_PINS);
+  const [userPins, setUserPins] = useState<Pin[]>([]);
   const [hydrated, setHydrated] = useState(false);
+
+  // Merge seeded + user-added pins at runtime
+  const pins = useMemo(() => [...SEED_PINS, ...userPins], [userPins]);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -42,6 +47,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedUnit) setUnitState(JSON.parse(savedUnit));
       const savedTracked = localStorage.getItem(STORAGE_KEY_TRACKED);
       if (savedTracked) setTracked(JSON.parse(savedTracked));
+      const savedUserPins = localStorage.getItem(STORAGE_KEY_USER_PINS);
+      if (savedUserPins) setUserPins(JSON.parse(savedUserPins));
     } catch {
       // ignore parse errors
     }
@@ -63,6 +70,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY_TRACKED, JSON.stringify(tracked));
   }, [tracked, hydrated]);
+
+  // Persist user-added pins to localStorage
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY_USER_PINS, JSON.stringify(userPins));
+  }, [userPins, hydrated]);
 
   const setUnit = useCallback((u: HousingUnit) => {
     setUnitState(u);
@@ -94,6 +107,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const addPin = useCallback((pin: Pin) => {
+    setUserPins((prev) => [...prev, pin]);
+  }, []);
 
   const getFitTag = useCallback(
     (pin: Pin): FitTag => {
@@ -148,6 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tracked,
         setUnit,
         addMemberToUnit,
+        addPin,
         getFitTag,
         getFitReasons,
         trackPin,

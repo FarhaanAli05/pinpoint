@@ -3,6 +3,7 @@ export type RoommateOpenness = "yes" | "maybe" | "no";
 export type PinType = "room" | "whole-unit";
 export type FitTag = "Great" | "OK" | "Conflict";
 export type TrackerStatus = "saved" | "messaged" | "viewing" | "rejected";
+export type SourceType = "seeded" | "user-added";
 
 export interface UnitMember {
   id: string;
@@ -35,6 +36,11 @@ export interface Pin {
   bedrooms: number;
   features: string[]; // e.g. ["pet-friendly", "smoking-allowed", "quiet"]
   externalLink?: string;
+  // Provenance — Pinpoint does not own listings; these fields clarify where they came from
+  sourceType: SourceType;
+  sourceLabel?: string; // e.g. "Facebook Marketplace", "Kijiji"
+  addedByUnitId?: string;
+  createdAt: number; // timestamp
 }
 
 export interface TrackedPin {
