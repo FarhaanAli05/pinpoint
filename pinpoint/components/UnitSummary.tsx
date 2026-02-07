@@ -9,7 +9,7 @@ export function UnitSummary() {
 
   if (!unit) {
     return (
-      <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted">
+      <div className="rounded-lg border border-dashed border-border-subtle bg-card p-3 text-sm text-muted">
         No housing unit created yet.{" "}
         <a href="/onboarding" className="text-primary underline">
           Create one
@@ -32,7 +32,7 @@ export function UnitSummary() {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Your Housing Unit</h3>
+        <h3 className="text-sm font-semibold text-foreground">Your Housing Unit</h3>
         <span className="rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary">
           {unit.members.length} member{unit.members.length !== 1 && "s"}
         </span>

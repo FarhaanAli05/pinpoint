@@ -5,10 +5,10 @@ import { TrackerStatus } from "@/lib/types";
 import Link from "next/link";
 
 const COLUMNS: { status: TrackerStatus; label: string; color: string }[] = [
-  { status: "saved", label: "Saved", color: "border-indigo-300 bg-indigo-50" },
-  { status: "messaged", label: "Messaged", color: "border-blue-300 bg-blue-50" },
-  { status: "viewing", label: "Viewing Scheduled", color: "border-amber-300 bg-amber-50" },
-  { status: "rejected", label: "Rejected", color: "border-red-300 bg-red-50" },
+  { status: "saved", label: "Saved", color: "border-fit-ok/30 bg-fit-ok-bg" },
+  { status: "messaged", label: "Messaged", color: "border-primary/30 bg-primary-light" },
+  { status: "viewing", label: "Viewing Scheduled", color: "border-warning/30 bg-warning/10" },
+  { status: "rejected", label: "Rejected", color: "border-fit-conflict/30 bg-fit-conflict-bg" },
 ];
 
 export default function TrackerPage() {
@@ -18,28 +18,28 @@ export default function TrackerPage() {
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tracker</h1>
+          <h1 className="text-2xl font-bold text-foreground">Tracker</h1>
           <p className="text-sm text-muted">
             Track your housing applications in one place.
           </p>
         </div>
         <Link
           href="/map"
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-light hover:text-primary"
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated hover:text-primary"
         >
           Back to Map
         </Link>
       </div>
 
       {tracked.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card py-16">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface py-16">
           <p className="mb-2 text-lg font-medium text-muted">No tracked pins yet</p>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-4 text-sm text-muted-subtle">
             Save or message listings from the map to see them here.
           </p>
           <Link
             href="/map"
-            className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+            className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-background transition-colors hover:bg-primary-hover"
           >
             Go to Map
           </Link>
@@ -51,7 +51,7 @@ export default function TrackerPage() {
             return (
               <div key={col.status}>
                 <div
-                  className={`mb-3 rounded-lg border-2 px-3 py-2 text-sm font-semibold ${col.color}`}
+                  className={`mb-3 rounded-lg border-2 px-3 py-2 text-sm font-semibold text-foreground ${col.color}`}
                 >
                   {col.label}{" "}
                   <span className="font-normal text-muted">({items.length})</span>
@@ -65,7 +65,7 @@ export default function TrackerPage() {
                         key={item.pinId}
                         className="rounded-lg border border-border bg-card p-3"
                       >
-                        <p className="mb-1 text-sm font-medium">{pin.title}</p>
+                        <p className="mb-1 text-sm font-medium text-foreground">{pin.title}</p>
                         <p className="text-xs text-muted">
                           ${pin.rent}/mo &middot; {pin.address}
                         </p>
@@ -77,7 +77,7 @@ export default function TrackerPage() {
                                 onClick={() =>
                                   trackPin(item.pinId, target.status)
                                 }
-                                className="rounded-md border border-border px-2 py-0.5 text-xs text-muted transition-colors hover:bg-primary-light hover:text-primary"
+                                className="rounded-md border border-border px-2 py-0.5 text-xs text-muted transition-colors hover:bg-surface-elevated hover:text-primary"
                               >
                                 Move to {target.label}
                               </button>
@@ -88,7 +88,7 @@ export default function TrackerPage() {
                     );
                   })}
                   {items.length === 0 && (
-                    <p className="py-4 text-center text-xs text-muted">
+                    <p className="py-4 text-center text-xs text-muted-subtle">
                       No items
                     </p>
                   )}

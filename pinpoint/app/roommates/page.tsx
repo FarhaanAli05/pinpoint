@@ -71,10 +71,12 @@ function ProfileForm({
     { value: "late", label: "Night owl" },
   ];
 
+  const inputClass = "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
+
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-4">
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           First Name *
         </label>
         <input
@@ -83,12 +85,12 @@ function ProfileForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="Your first name"
           required
-          className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Program / Year (optional)
         </label>
         <input
@@ -96,13 +98,13 @@ function ProfileForm({
           value={program}
           onChange={(e) => setProgram(e.target.value)}
           placeholder="e.g. Engineering, 2nd year"
-          className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className={inputClass}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+          <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
             Budget Min ($/mo)
           </label>
           <input
@@ -110,11 +112,11 @@ function ProfileForm({
             value={budgetMin}
             onChange={(e) => setBudgetMin(e.target.value)}
             min="0"
-            className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+          <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
             Budget Max ($/mo)
           </label>
           <input
@@ -122,25 +124,25 @@ function ProfileForm({
             value={budgetMax}
             onChange={(e) => setBudgetMax(e.target.value)}
             min="0"
-            className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className={inputClass}
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Move-in Month
         </label>
         <input
           type="month"
           value={moveInMonth}
           onChange={(e) => setMoveInMonth(e.target.value)}
-          className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Dealbreakers
         </label>
         <div className="flex flex-wrap gap-1.5">
@@ -151,8 +153,8 @@ function ProfileForm({
               onClick={() => toggleDealbreaker(opt.value)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 dealbreakers.includes(opt.value)
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-muted hover:bg-gray-200"
+                  ? "bg-primary text-background"
+                  : "bg-surface-elevated text-muted hover:bg-card-hover"
               }`}
             >
               {opt.label}
@@ -162,7 +164,7 @@ function ProfileForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Cleanliness
         </label>
         <div className="flex gap-1.5">
@@ -174,7 +176,7 @@ function ProfileForm({
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                 cleanliness === opt.value
                   ? "border-primary bg-primary-light text-primary"
-                  : "border-border text-muted hover:border-primary/30"
+                  : "border-border bg-card text-muted hover:border-border-subtle"
               }`}
             >
               {opt.label}
@@ -184,7 +186,7 @@ function ProfileForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Sleep Schedule
         </label>
         <div className="flex gap-1.5">
@@ -196,7 +198,7 @@ function ProfileForm({
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                 sleepSchedule === opt.value
                   ? "border-primary bg-primary-light text-primary"
-                  : "border-border text-muted hover:border-primary/30"
+                  : "border-border bg-card text-muted hover:border-border-subtle"
               }`}
             >
               {opt.label}
@@ -206,7 +208,7 @@ function ProfileForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           Guests
         </label>
         <div className="flex gap-1.5">
@@ -218,7 +220,7 @@ function ProfileForm({
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                 guests === opt.value
                   ? "border-primary bg-primary-light text-primary"
-                  : "border-border text-muted hover:border-primary/30"
+                  : "border-border bg-card text-muted hover:border-border-subtle"
               }`}
             >
               {opt.label}
@@ -228,7 +230,7 @@ function ProfileForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
           About Me (optional)
         </label>
         <textarea
@@ -237,14 +239,14 @@ function ProfileForm({
           placeholder="A few words about your living preferences..."
           rows={2}
           maxLength={200}
-          className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className={inputClass}
         />
       </div>
 
       <button
         type="submit"
         disabled={!name.trim()}
-        className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+        className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
         Create Profile & Find Matches
       </button>
@@ -268,12 +270,11 @@ function MatchCard({
 
   const scoreColor =
     match.score >= 75
-      ? "text-green-700 bg-green-100"
+      ? "text-fit-great bg-fit-great-bg"
       : match.score >= 50
-      ? "text-indigo-700 bg-indigo-100"
-      : "text-red-700 bg-red-100";
+      ? "text-fit-ok bg-fit-ok-bg"
+      : "text-fit-conflict bg-fit-conflict-bg";
 
-  // Pick top 3 reasons
   const topReasons = match.reasons.slice(0, 3);
 
   async function handleGenerateMessage() {
@@ -315,10 +316,10 @@ function MatchCard({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-bold">{match.profile.name}</h3>
+          <h3 className="text-sm font-bold text-foreground">{match.profile.name}</h3>
           {match.profile.program && (
             <p className="text-xs text-muted">{match.profile.program}</p>
           )}
@@ -331,17 +332,17 @@ function MatchCard({
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-        <div className="rounded-lg bg-gray-50 p-1.5 text-center">
-          <span className="block font-semibold">${match.profile.budgetMin}–${match.profile.budgetMax}</span>
-          <span className="text-muted">Budget</span>
+        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
+          <span className="block font-semibold text-foreground">${match.profile.budgetMin}–${match.profile.budgetMax}</span>
+          <span className="text-muted-subtle">Budget</span>
         </div>
-        <div className="rounded-lg bg-gray-50 p-1.5 text-center">
-          <span className="block font-semibold">{match.profile.moveInMonth}</span>
-          <span className="text-muted">Move-in</span>
+        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
+          <span className="block font-semibold text-foreground">{match.profile.moveInMonth}</span>
+          <span className="text-muted-subtle">Move-in</span>
         </div>
-        <div className="rounded-lg bg-gray-50 p-1.5 text-center">
-          <span className="block font-semibold capitalize">{match.profile.sleepSchedule}</span>
-          <span className="text-muted">Sleep</span>
+        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
+          <span className="block font-semibold text-foreground capitalize">{match.profile.sleepSchedule}</span>
+          <span className="text-muted-subtle">Sleep</span>
         </div>
       </div>
 
@@ -363,7 +364,7 @@ function MatchCard({
       </div>
 
       {message && (
-        <div className="mt-3 rounded-lg bg-primary-light p-2.5">
+        <div className="mt-3 rounded-lg border border-primary/20 bg-primary-light p-2.5">
           <p className="text-xs text-foreground whitespace-pre-wrap">{message}</p>
           <button
             onClick={handleCopyMessage}
@@ -378,7 +379,7 @@ function MatchCard({
         <button
           onClick={handleGenerateMessage}
           disabled={generatingMessage}
-          className="flex-1 rounded-lg bg-primary py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          className="flex-1 rounded-lg bg-primary py-2 text-xs font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           {generatingMessage
             ? "Generating..."
@@ -388,7 +389,7 @@ function MatchCard({
         </button>
         <button
           onClick={handleInvite}
-          className="rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-primary-light"
+          className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-elevated"
         >
           {copied ? "Copied!" : "Invite to Unit"}
         </button>
@@ -424,7 +425,7 @@ export default function RoommatesPage() {
   return (
     <div className="min-h-[calc(100vh-49px)] bg-background">
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Roommate Matchmaking</h1>
+        <h1 className="text-2xl font-bold text-foreground">Roommate Matchmaking</h1>
         <p className="mt-1 text-sm text-muted">
           Find compatible roommates based on budget, move-in timing, and
           lifestyle preferences.
@@ -432,7 +433,7 @@ export default function RoommatesPage() {
 
         {!myProfile ? (
           <div className="mt-6">
-            <h2 className="mb-4 text-lg font-semibold">
+            <h2 className="mb-4 text-lg font-semibold text-foreground">
               Create Your Roommate Profile
             </h2>
             <ProfileForm onSubmit={handleProfileCreate} />
@@ -443,10 +444,10 @@ export default function RoommatesPage() {
             <div className="rounded-xl border border-primary/20 bg-primary-light p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                  <p className="font-mono text-xs font-semibold uppercase tracking-wider text-primary">
                     Your Profile
                   </p>
-                  <h3 className="text-sm font-bold">{myProfile.name}</h3>
+                  <h3 className="text-sm font-bold text-foreground">{myProfile.name}</h3>
                   {myProfile.program && (
                     <p className="text-xs text-muted">{myProfile.program}</p>
                   )}
@@ -460,7 +461,7 @@ export default function RoommatesPage() {
 
             {/* Matches */}
             <div>
-              <h2 className="mb-3 text-lg font-semibold">
+              <h2 className="mb-3 text-lg font-semibold text-foreground">
                 Your Matches ({matches.length})
               </h2>
               {matches.length === 0 ? (

@@ -8,19 +8,16 @@ import { MatchResult } from "@/lib/roommate-match";
 import { QUEENS_CAMPUS } from "@/lib/seed-data";
 
 const FIT_COLORS: Record<FitTag, string> = {
-  Great: "#10b981",
-  OK: "#6366f1",
-  Conflict: "#ef4444",
+  Great: "#34d399",
+  OK: "#818cf8",
+  Conflict: "#f87171",
 };
 
-// Deterministic position for a roommate profile based on its ID.
-// Generates a stable offset around QUEENS_CAMPUS so pins don't stack.
 function roommateLatLng(profileId: string): [number, number] {
   let hash = 0;
   for (let i = 0; i < profileId.length; i++) {
     hash = (hash * 31 + profileId.charCodeAt(i)) | 0;
   }
-  // Spread ±0.008° around campus (~800m radius)
   const latOff = ((((hash >>> 0) % 1600) - 800) / 100000);
   const lngOff = ((((hash >>> 8) % 1600) - 800) / 100000);
   return [QUEENS_CAMPUS.lat + latOff, QUEENS_CAMPUS.lng + lngOff];
@@ -31,27 +28,26 @@ export interface MapViewProps {
   getFitTag: (pin: Pin) => FitTag;
   onPinClick: (pin: Pin) => void;
   selectedPinId?: string;
-  // Roommate layer
   showRoommateLayer: boolean;
   roommateMatches: MatchResult[];
   selectedRoommateId?: string | null;
   onRoommateClick: (match: MatchResult) => void;
-  // Anchor (You)
   showAnchor: boolean;
 }
 
 function createPinIcon(color: string, selected: boolean) {
-  const size = selected ? 16 : 12;
-  const border = selected ? 3 : 2;
+  const size = selected ? 20 : 14;
+  const strokeWidth = selected ? 3 : 2;
   return L.divIcon({
     className: "",
     html: `<div style="
       width:${size}px;height:${size}px;
       background:${color};
-      border:${border}px solid white;
+      border:${strokeWidth}px solid rgba(255,255,255,0.9);
       border-radius:50%;
-      box-shadow:0 1px 4px rgba(0,0,0,0.3);
-      ${selected ? "transform:scale(1.3);" : ""}
+      box-shadow:0 0 ${selected ? '12' : '6'}px ${color}80, 0 2px 4px rgba(0,0,0,0.4);
+      ${selected ? "transform:scale(1.2);" : ""}
+      transition: transform 150ms ease-out, box-shadow 150ms ease-out;
     "></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -64,10 +60,11 @@ function createCampusIcon() {
     html: `<div style="
       display:flex;align-items:center;justify-content:center;
       width:32px;height:32px;
-      background:#6366f1;color:white;
-      border-radius:8px;font-size:16px;font-weight:bold;
-      box-shadow:0 2px 6px rgba(0,0,0,0.25);
-      border:2px solid white;
+      background:#818cf8;color:#09090b;
+      border-radius:8px;font-size:14px;font-weight:bold;
+      box-shadow:0 0 12px rgba(129,140,248,0.4), 0 2px 6px rgba(0,0,0,0.4);
+      border:2px solid rgba(255,255,255,0.8);
+      font-family:var(--font-geist-mono),monospace;
     ">Q</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
@@ -80,10 +77,11 @@ function createAnchorIcon() {
     html: `<div style="
       display:flex;align-items:center;justify-content:center;
       width:28px;height:28px;
-      background:#10b981;color:white;
-      border-radius:50%;font-size:12px;font-weight:bold;
-      box-shadow:0 2px 6px rgba(0,0,0,0.25);
-      border:2px solid white;
+      background:#34d399;color:#09090b;
+      border-radius:50%;font-size:10px;font-weight:bold;
+      box-shadow:0 0 10px rgba(52,211,153,0.4), 0 2px 6px rgba(0,0,0,0.4);
+      border:2px solid rgba(255,255,255,0.8);
+      font-family:var(--font-geist-mono),monospace;
     ">You</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
@@ -92,19 +90,20 @@ function createAnchorIcon() {
 
 function createRoommateIcon(initial: string, selected: boolean, score: number) {
   const size = selected ? 26 : 22;
-  const border = selected ? 3 : 2;
-  const bg = score >= 80 ? "#10b981" : score >= 60 ? "#6366f1" : "#9ca3af";
+  const strokeWidth = selected ? 3 : 2;
+  const bg = score >= 80 ? "#34d399" : score >= 60 ? "#818cf8" : "#71717a";
   return L.divIcon({
     className: "",
     html: `<div style="
       display:flex;align-items:center;justify-content:center;
       width:${size}px;height:${size}px;
-      background:${bg};color:white;
-      border:${border}px solid white;
+      background:${bg};color:#09090b;
+      border:${strokeWidth}px solid rgba(255,255,255,0.8);
       border-radius:50%;
       font-size:10px;font-weight:bold;
-      box-shadow:0 1px 4px rgba(0,0,0,0.3);
-      ${selected ? "transform:scale(1.15);" : ""}
+      box-shadow:0 0 ${selected ? '10' : '4'}px ${bg}60, 0 2px 4px rgba(0,0,0,0.4);
+      ${selected ? "transform:scale(1.1);" : ""}
+      font-family:var(--font-geist-mono),monospace;
     ">${initial}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -112,9 +111,9 @@ function createRoommateIcon(initial: string, selected: boolean, score: number) {
 }
 
 function getLineColor(score: number): string {
-  if (score >= 80) return "#10b981";
-  if (score >= 60) return "#6366f1";
-  return "#9ca3af";
+  if (score >= 80) return "#34d399";
+  if (score >= 60) return "#818cf8";
+  return "#71717a";
 }
 
 export default function MapView({
@@ -145,8 +144,11 @@ export default function MapView({
       zoomControl: true,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+    // Dark tile layer (CartoDB Dark Matter)
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 19,
     }).addTo(map);
 
     // Queen's campus marker
@@ -167,7 +169,7 @@ export default function MapView({
     };
   }, []);
 
-  // Update listing markers when pins or selection changes
+  // Update listing markers
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -194,7 +196,6 @@ export default function MapView({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Remove old roommate markers
     roommateMarkersRef.current.forEach((m) => m.remove());
     roommateMarkersRef.current = [];
 
@@ -240,11 +241,10 @@ export default function MapView({
     anchorMarkerRef.current = anchor;
   }, [showAnchor, showRoommateLayer]);
 
-  // Connection polyline: anchor -> selected roommate
+  // Connection polyline
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Remove old line
     if (polylineRef.current) {
       polylineRef.current.remove();
       polylineRef.current = null;
@@ -268,7 +268,7 @@ export default function MapView({
       {
         color,
         weight: 2,
-        opacity: 0.5,
+        opacity: 0.4,
         dashArray: "6 4",
       }
     ).addTo(mapRef.current);

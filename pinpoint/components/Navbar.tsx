@@ -8,12 +8,12 @@ export function Navbar() {
   const pathname = usePathname();
   const { unit } = useApp();
 
-  // Hide navbar on landing page
-  if (pathname === "/") return null;
+  // Hide navbar on landing page and map page (map has its own rail)
+  if (pathname === "/" || pathname === "/map") return null;
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-card px-4 py-3 shadow-sm">
-      <Link href="/" className="text-lg font-bold text-primary">
+    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-surface/90 px-4 py-3 backdrop-blur-md">
+      <Link href="/" className="font-mono text-lg font-bold text-primary">
         Pinpoint
       </Link>
       <div className="flex items-center gap-4 text-sm font-medium">

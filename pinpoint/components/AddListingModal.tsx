@@ -22,7 +22,6 @@ const FEATURE_OPTIONS = [
   { value: "furnished", label: "Furnished" },
 ];
 
-// Preset neighborhood locations near Queen's
 const LOCATION_PRESETS = [
   { label: "Near Queen's Campus", lat: 44.2253, lng: -76.4951 },
   { label: "West End / Portsmouth", lat: 44.2280, lng: -76.5100 },
@@ -33,7 +32,6 @@ const LOCATION_PRESETS = [
 export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const { unit, addPin } = useApp();
 
-  // Step 1 state
   const [step, setStep] = useState<Step>("input");
   const [url, setUrl] = useState("");
   const [manualMode, setManualMode] = useState(false);
@@ -41,7 +39,6 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const [parseError, setParseError] = useState("");
   const [parseSuccess, setParseSuccess] = useState(false);
 
-  // Step 2 (confirm) state — fields the user can edit
   const [title, setTitle] = useState("");
   const [rent, setRent] = useState("");
   const [address, setAddress] = useState("");
@@ -52,7 +49,6 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const [features, setFeatures] = useState<string[]>([]);
   const [sourceLabel, setSourceLabel] = useState("");
 
-  // Location selection
   const [locationMode, setLocationMode] = useState<"preset" | "drop">("preset");
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [dropLat, setDropLat] = useState("");
@@ -82,7 +78,6 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
 
       const data = await res.json();
 
-      // Track how many fields we could auto-fill
       let filledCount = 0;
 
       if (data.title) { setTitle(data.title); filledCount++; }
@@ -96,7 +91,6 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
         setFeatures((prev) => prev.includes("furnished") ? prev : [...prev, "furnished"]);
       }
       if (data.features?.length) {
-        // Map parsed features to our known feature set where possible
         const mapped: string[] = [];
         for (const f of data.features as string[]) {
           const lower = f.toLowerCase();
@@ -142,7 +136,6 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
       const lng = parseFloat(dropLng);
       if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
     }
-    // Use preset with small jitter so multiple pins don't stack
     const preset = LOCATION_PRESETS[selectedPreset];
     const jitterLat = (Math.random() - 0.5) * 0.004;
     const jitterLng = (Math.random() - 0.5) * 0.006;
@@ -179,17 +172,19 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
     onClose();
   }
 
+  const inputClass = "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
+
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4">
-      <div className="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-lg rounded-xl border border-border bg-surface shadow-2xl shadow-black/40">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-lg font-bold">
+          <h2 className="text-lg font-bold text-foreground">
             {step === "input" ? "Add a Listing" : "Confirm Details"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-border hover:text-foreground"
+            className="rounded-md p-1 text-muted hover:bg-surface-elevated hover:text-foreground"
             aria-label="Close"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -207,7 +202,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
             </p>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+              <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                 Listing URL
               </label>
               <input
@@ -215,20 +210,20 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://facebook.com/marketplace/item/..."
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className={inputClass}
                 autoFocus
               />
             </div>
 
             {parseError && (
-              <p className="text-xs text-red-600">{parseError}</p>
+              <p className="text-xs text-danger">{parseError}</p>
             )}
 
             <div className="flex items-center gap-3">
               <button
                 onClick={handleParseUrl}
                 disabled={parsing}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
               >
                 {parsing ? "Fetching details..." : url.trim() ? "Auto-fill from URL" : "Skip — Enter Manually"}
               </button>
@@ -244,7 +239,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
               I&apos;ll enter details manually
             </button>
 
-            <p className="text-xs text-muted/70">
+            <p className="text-xs text-muted-subtle">
               Pinpoint does not own or host these listings. You&apos;re bookmarking an
               external source for your group.
             </p>
@@ -255,19 +250,19 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
         {step === "confirm" && (
           <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-5">
             {parseSuccess && (
-              <p className="mb-3 rounded-lg bg-green-50 p-2 text-xs text-green-700">
+              <p className="mb-3 rounded-lg border border-fit-great/20 bg-fit-great-bg p-2 text-xs text-fit-great">
                 Auto-filled from {sourceLabel || "URL"}. Review and edit as needed.
               </p>
             )}
             {parseError && (
-              <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
+              <p className="mb-3 rounded-lg border border-warning/20 bg-warning/10 p-2 text-xs text-warning">
                 {parseError}
               </p>
             )}
 
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                   Title *
                 </label>
                 <input
@@ -275,14 +270,14 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. 2BR apartment near campus"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={inputClass}
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                  <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                     Rent ($/mo) *
                   </label>
                   <input
@@ -291,25 +286,25 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                     onChange={(e) => setRent(e.target.value)}
                     placeholder="1200"
                     min="0"
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={inputClass}
                     required
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                  <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                     Move-in Date
                   </label>
                   <input
                     type="date"
                     value={moveInDate}
                     onChange={(e) => setMoveInDate(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                   Address
                 </label>
                 <input
@@ -317,13 +312,13 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="e.g. 123 University Ave, Kingston"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={inputClass}
                 />
               </div>
 
               {/* Location picker */}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                   Pin Location
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -332,8 +327,8 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                     onClick={() => setLocationMode("preset")}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       locationMode === "preset"
-                        ? "bg-primary text-white"
-                        : "bg-gray-100 text-muted hover:bg-gray-200"
+                        ? "bg-primary text-background"
+                        : "bg-surface-elevated text-muted hover:bg-card-hover"
                     }`}
                   >
                     Choose area
@@ -343,8 +338,8 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                     onClick={() => setLocationMode("drop")}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       locationMode === "drop"
-                        ? "bg-primary text-white"
-                        : "bg-gray-100 text-muted hover:bg-gray-200"
+                        ? "bg-primary text-background"
+                        : "bg-surface-elevated text-muted hover:bg-card-hover"
                     }`}
                   >
                     Enter coordinates
@@ -361,7 +356,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                         className={`rounded-lg border px-2.5 py-2 text-xs text-left transition-colors ${
                           selectedPreset === idx
                             ? "border-primary bg-primary-light text-primary font-medium"
-                            : "border-border text-muted hover:border-primary/30"
+                            : "border-border bg-card text-muted hover:border-border-subtle"
                         }`}
                       >
                         {preset.label}
@@ -375,16 +370,16 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                       value={dropLat}
                       onChange={(e) => setDropLat(e.target.value)}
                       placeholder="Latitude (e.g. 44.225)"
-                      className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className={inputClass}
                     />
                     <input
                       type="text"
                       value={dropLng}
                       onChange={(e) => setDropLng(e.target.value)}
                       placeholder="Longitude (e.g. -76.495)"
-                      className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className={inputClass}
                     />
-                    <p className="col-span-2 text-xs text-muted/70">
+                    <p className="col-span-2 text-xs text-muted-subtle">
                       Tip: Right-click on Google Maps to copy coordinates
                     </p>
                   </div>
@@ -393,20 +388,20 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                  <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                     Type
                   </label>
                   <select
                     value={pinType}
                     onChange={(e) => setPinType(e.target.value as PinType)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={inputClass}
                   >
                     <option value="room">Room</option>
                     <option value="whole-unit">Whole Unit</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                  <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                     Bedrooms
                   </label>
                   <input
@@ -415,13 +410,13 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                     onChange={(e) => setBedrooms(e.target.value)}
                     min="1"
                     max="10"
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                   Description
                 </label>
                 <textarea
@@ -429,12 +424,12 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Notes about this listing..."
                   rows={2}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
                   Features
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -445,8 +440,8 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                       onClick={() => toggleFeature(opt.value)}
                       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                         features.includes(opt.value)
-                          ? "bg-primary text-white"
-                          : "bg-gray-100 text-muted hover:bg-gray-200"
+                          ? "bg-primary text-background"
+                          : "bg-surface-elevated text-muted hover:bg-card-hover"
                       }`}
                     >
                       {opt.label}
@@ -456,12 +451,12 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
               </div>
 
               {url.trim() && !manualMode && (
-                <div className="rounded-lg bg-gray-50 p-2.5">
+                <div className="rounded-lg border border-border bg-card p-2.5">
                   <p className="text-xs text-muted">
                     <span className="font-semibold">Source:</span>{" "}
                     {sourceLabel || "External link"}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-muted/70">{url}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-subtle">{url}</p>
                 </div>
               )}
             </div>
@@ -474,20 +469,20 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                   setParseError("");
                   setParseSuccess(false);
                 }}
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={submitting || !title.trim() || !rent}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
               >
                 {submitting ? "Adding..." : "Add to Map"}
               </button>
             </div>
 
-            <p className="mt-3 text-center text-xs text-muted/70">
+            <p className="mt-3 text-center text-xs text-muted-subtle">
               This listing will be visible to your housing unit.
               Pinpoint does not own or verify external listings.
             </p>
