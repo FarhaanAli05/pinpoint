@@ -1,51 +1,400 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+
+/* ── Static data ── */
+
+const STEPS = [
+  {
+    num: "01",
+    title: "Form your unit",
+    desc: "Set budget, move-in date, and dealbreakers. Invite your group with a single link.",
+  },
+  {
+    num: "02",
+    title: "Add listings",
+    desc: "Paste a URL from any site. AI extracts rent, dates, and features automatically.",
+  },
+  {
+    num: "03",
+    title: "See what fits",
+    desc: "Every listing is scored against your group. Great, OK, or Conflict — instantly.",
+  },
+  {
+    num: "04",
+    title: "Reach out together",
+    desc: "AI drafts personalized landlord messages. Track contacts. Stay aligned.",
+  },
+];
+
+const SHOWCASE_FEATURES = [
+  { label: "Budget", value: "$600–$900" },
+  { label: "Move-in", value: "Sep 2025" },
+  { label: "Fit", value: "Great" },
+  { label: "Members", value: "3" },
+];
+
+const SHOWCASE_LISTINGS = [
+  {
+    title: "2BR near Queen's",
+    rent: "$850/mo",
+    tag: "Great",
+    cls: "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-400/10",
+  },
+  {
+    title: "Studio Downtown",
+    rent: "$720/mo",
+    tag: "OK",
+    cls: "text-indigo-700 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-400/10",
+  },
+  {
+    title: "4BR Portsmouth",
+    rent: "$1,100/mo",
+    tag: "Great",
+    cls: "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-400/10",
+  },
+];
+
+const SECTIONS = ["hero", "steps", "showcase"] as const;
+
+/* ── Page ── */
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen w-full bg-zinc-100 dark:bg-[#0A0A0A] relative overflow-hidden">
-      <nav className="relative z-20 flex items-center justify-between px-8 py-6">
-        <Link
-          href="/"
-          aria-label="Pinpoint home"
-          className="flex items-center gap-2 text-zinc-950 dark:text-white font-semibold text-lg"
-        >
-          <span className="flex items-center justify-center w-8 h-8 rounded-none border border-zinc-300 dark:border-zinc-800 bg-zinc-200 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-          </span>
-          Pinpoint
-        </Link>
-        <Link href="/auth/signin?callbackUrl=/onboard" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors">
-          Sign in with Google
-        </Link>
-      </nav>
+  const showcaseRef = useRef<HTMLDivElement>(null);
 
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-88px)] px-4 text-center">
-        <h1 className="font-mono text-5xl md:text-6xl lg:text-7xl text-zinc-950 dark:text-white mb-4 tracking-tight text-balance">
-          Room & roommates
-          <br />
-          on one map
-        </h1>
-        <p className="text-zinc-600 dark:text-white/60 text-base md:text-lg max-w-md mb-8">
-          Find a place and people to share it with. One flow.
-        </p>
-        <Link
-          href="/auth/signin?callbackUrl=/onboard"
-          className="inline-flex items-center gap-2 px-8 py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg font-medium hover:opacity-90 transition-opacity"
+  /* Viewport scroll — rail fade */
+  const { scrollY } = useScroll();
+  const railOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+
+  /* Showcase parallax */
+  const { scrollYProgress: showcaseProgress } = useScroll({
+    target: showcaseRef,
+    offset: ["start end", "end start"],
+  });
+  const showcaseY = useTransform(showcaseProgress, [0, 1], [60, -60]);
+  const showcaseScale = useTransform(
+    showcaseProgress,
+    [0, 0.5, 1],
+    [0.96, 1, 0.98],
+  );
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-[#0A0A0A]">
+      {/* Dot grid background */}
+      <div className="dot-grid pointer-events-none fixed inset-0 z-0" />
+
+      {/* ── Left rail cue ── */}
+      <motion.nav
+        style={{ opacity: railOpacity }}
+        className="fixed left-20 top-1/2 z-20 hidden -translate-y-1/2 lg:flex"
+        aria-label="Page sections"
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-px bg-gradient-to-b from-transparent to-zinc-300 dark:to-zinc-700/50" />
+          {SECTIONS.map((id) => (
+            <button
+              key={id}
+              onClick={() =>
+                document
+                  .getElementById(id)
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="h-1.5 w-1.5 rounded-full bg-zinc-300 transition-colors hover:bg-zinc-500 dark:bg-zinc-700 dark:hover:bg-zinc-400"
+              aria-label={`Scroll to ${id}`}
+            />
+          ))}
+          <div className="h-10 w-px bg-gradient-to-b from-zinc-300 to-transparent dark:from-zinc-700/50" />
+        </div>
+      </motion.nav>
+
+      {/* ── Hero ── */}
+      <section
+        id="hero"
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent dark:from-[#0A0A0A] dark:via-[#0A0A0A]/80 dark:to-transparent" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+          className="relative z-10 mx-auto max-w-2xl text-center"
         >
-          Get started (Sign in with Google)
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </Link>
-        <Link href="/auth/signin?callbackUrl=/listings" className="mt-4 text-sm text-zinc-500 dark:text-white/50 hover:underline">
-          Already have an account? Sign in
-        </Link>
-      </main>
+          <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+            Housing coordination layer
+          </p>
+
+          <h1 className="mb-6 font-mono text-5xl font-medium leading-[1.08] tracking-tight text-zinc-950 dark:text-white sm:text-7xl">
+            Room &amp; roommates
+            <br />
+            on one map
+          </h1>
+
+          <p className="mx-auto mb-10 max-w-md text-base leading-relaxed text-zinc-500 dark:text-white/50">
+            Find a place and people to share it with. One flow.
+          </p>
+
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/auth/signin?callbackUrl=/onboard"
+              className="group inline-flex h-11 items-center gap-2 rounded-md bg-zinc-900 px-7 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            >
+              Get started
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform group-hover:translate-x-0.5"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href="/listings"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-zinc-300 px-7 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-white"
+            >
+              Explore demo
+            </Link>
+          </div>
+
+          <p className="mt-5 text-xs text-zinc-400 dark:text-zinc-600">
+            Already have an account?{" "}
+            <Link
+              href="/auth/signin?callbackUrl=/listings"
+              className="underline underline-offset-2 transition-colors hover:text-zinc-600 dark:hover:text-zinc-400"
+            >
+              Sign in
+            </Link>
+          </p>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2"
+        >
+          <div className="flex flex-col items-center gap-1.5 text-zinc-400 dark:text-zinc-700">
+            <span className="font-mono text-[9px] uppercase tracking-[0.3em]">
+              scroll
+            </span>
+            <motion.svg
+              animate={{ y: [0, 3, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: 2,
+                ease: "easeInOut",
+              }}
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </motion.svg>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section id="steps" className="relative z-10 px-4 py-24">
+        <div className="mx-auto max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-14 text-center"
+          >
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+              How it works
+            </p>
+            <h2 className="font-mono text-2xl font-medium tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
+              Four steps to aligned housing
+            </h2>
+          </motion.div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {STEPS.map((step, i) => (
+              <motion.div
+                key={step.num}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.4, delay: i * 0.07 }}
+                className="rounded-lg border border-zinc-200 bg-white/60 p-5 transition-colors hover:border-zinc-300 hover:bg-white dark:border-zinc-800/80 dark:bg-zinc-900/40 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/70"
+              >
+                <span className="font-mono text-[10px] tracking-wider text-zinc-400 dark:text-zinc-600">
+                  {step.num}
+                </span>
+                <h3 className="mt-2 text-sm font-semibold text-zinc-900 dark:text-white">
+                  {step.title}
+                </h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
+                  {step.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Showcase card (parallax) ── */}
+      <section
+        id="showcase"
+        ref={showcaseRef}
+        className="relative z-10 px-4 py-24"
+      >
+        <div className="mx-auto max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-10 text-center"
+          >
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+              At a glance
+            </p>
+            <h2 className="font-mono text-2xl font-medium tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
+              Everything your group needs
+            </h2>
+          </motion.div>
+
+          <motion.div
+            style={{ y: showcaseY, scale: showcaseScale }}
+            className="mx-auto max-w-xl"
+          >
+            <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/50">
+              {/* Window chrome */}
+              <div className="flex items-center gap-1.5 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-red-500/40" />
+                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-yellow-500/40" />
+                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-green-500/40" />
+                <span className="ml-2 font-mono text-[10px] text-zinc-400 dark:text-zinc-600">
+                  pinpoint / map
+                </span>
+              </div>
+
+              {/* Mock content */}
+              <div className="p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+                      Your Housing Unit
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-white">
+                      3 members &middot; Sep 2025
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono text-[10px] font-medium text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
+                    12 listings
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {SHOWCASE_FEATURES.map((f) => (
+                    <div
+                      key={f.label}
+                      className="rounded-md border border-zinc-100 bg-zinc-50 p-2 text-center dark:border-zinc-800 dark:bg-zinc-950/50"
+                    >
+                      <p className="font-mono text-[8px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                        {f.label}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-semibold text-zinc-900 dark:text-white">
+                        {f.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 space-y-1.5">
+                  {SHOWCASE_LISTINGS.map((item) => (
+                    <div
+                      key={item.title}
+                      className="flex items-center justify-between rounded-md border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800/60 dark:bg-zinc-950/30"
+                    >
+                      <div>
+                        <p className="text-xs font-medium text-zinc-900 dark:text-white">
+                          {item.title}
+                        </p>
+                        <p className="font-mono text-[10px] text-zinc-400 dark:text-zinc-600">
+                          {item.rent}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${item.cls}`}
+                      >
+                        {item.tag}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Bottom CTA ── */}
+      <section className="relative z-10 px-4 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5 }}
+          className="mx-auto max-w-md text-center"
+        >
+          <h2 className="mb-3 font-mono text-2xl font-medium tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
+            Ready to coordinate?
+          </h2>
+          <p className="mb-8 text-sm leading-relaxed text-zinc-500">
+            Set up your housing unit in under a minute. No data stored
+            remotely&nbsp;&mdash; everything stays in your browser.
+          </p>
+          <Link
+            href="/auth/signin?callbackUrl=/onboard"
+            className="group inline-flex h-11 items-center gap-2 rounded-md bg-zinc-900 px-7 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          >
+            Create your unit
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-transform group-hover:translate-x-0.5"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+          <p className="mt-5 font-mono text-[10px] tracking-wider text-zinc-400 dark:text-zinc-700">
+            No sign-up required &middot; Data stays local
+          </p>
+        </motion.div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="relative z-10 border-t border-zinc-200 py-6 text-center dark:border-zinc-800/60">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-700">
+          pinpoint &mdash; student housing, together
+        </p>
+      </footer>
     </div>
   );
 }

@@ -5,9 +5,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Geist Mono, monospace;
-  --font-mono: Geist Mono, monospace;
-  --font-serif: Geist Mono, monospace;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
   --radius: 0rem;
 }
 
@@ -95,4 +94,15 @@
 }
 .animate-slide-in-right {
   animation: slide-in-from-right 0.25s ease-out forwards;
+}
+
+/* Landing page — refined dot grid with radial vignette */
+.dot-grid {
+  background-image: radial-gradient(circle, rgb(161 161 170 / 0.06) 0.5px, transparent 0.5px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 70% 50% at 50% 30%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 30%, black 20%, transparent 80%);
+}
+.dark .dot-grid {
+  background-image: radial-gradient(circle, rgb(113 113 122 / 0.1) 0.5px, transparent 0.5px);
 }
