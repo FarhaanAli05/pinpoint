@@ -17,7 +17,7 @@ const CATEGORY_LABELS: Record<ListingCategory, string> = {
 };
 
 /** Glow is subtle: small blur, low opacity. "Me" pin: yellow + person style. */
-function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
+function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean, uniformColor?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
   if (isMe) {
     const scale = selected ? 1.2 : 1;
     const size = Math.round(14 * scale);
@@ -25,6 +25,9 @@ function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: bo
   }
   const scale = selected ? 1.2 : 1;
   const size = Math.round(12 * scale);
+  if (uniformColor) {
+    return { bg: "#14b8a6", glow: "rgba(20,184,166,0.35)", size };
+  }
   if (category === "looking-for-roommates" || category === "looking-for-room-and-roommate") {
     return { bg: "#ef4444", glow: "rgba(239,68,68,0.35)", size };
   }
@@ -54,10 +57,12 @@ interface MapViewProps {
   fitBoundsToPins?: boolean;
   /** When set, fly map to this center (e.g. after search) */
   flyToCenter?: { lat: number; lng: number } | null;
+  /** When true, use a single color for all pins (listings view, not roommate categories) */
+  uniformPinColor?: boolean;
 }
 
-function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean) {
-  const { bg, glow, size, isMe: meStyle } = getGlowDotStyle(category, selected, isMe);
+function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean, uniformColor?: boolean) {
+  const { bg, glow, size, isMe: meStyle } = getGlowDotStyle(category, selected, isMe, uniformColor);
   const total = size + 8;
   const blur = 4;
   const spread = 2;
@@ -91,6 +96,7 @@ export default function MapView({
   animateZoom = false,
   fitBoundsToPins = false,
   flyToCenter,
+  uniformPinColor = false,
 }: MapViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -179,7 +185,7 @@ export default function MapView({
       const isSelected = pin.id === selectedPinId;
       const isMe = !!pin.isMe;
       const marker = L.marker([pin.lat, pin.lng], {
-        icon: createPinIcon(pin.category, isSelected, isDark, isMe),
+        icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
       })
         .bindTooltip(
           `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
@@ -194,7 +200,7 @@ export default function MapView({
       const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
       mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
     }
-  }, [pins, onPinClick, selectedPinId, isDark, fitBoundsToPins]);
+  }, [pins, onPinClick, selectedPinId, isDark, fitBoundsToPins, uniformPinColor]);
 
   return (
     <div

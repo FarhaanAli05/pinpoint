@@ -59,6 +59,8 @@ export interface Pin {
   features: string[]; // e.g. ["pet-friendly", "smoking-allowed", "quiet"]
   /** For share-listing: original URL they pasted */
   externalLink?: string;
+  /** Image URLs (e.g. from Kijiji) */
+  images?: string[];
   /** Contact — email only */
   contactEmail?: string;
   /** Optional area for looking-for-roommates e.g. "Near Queen's campus" */
