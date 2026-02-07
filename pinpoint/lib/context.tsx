@@ -19,6 +19,7 @@ interface AppState {
   tracked: TrackedPin[];
   roommateProfiles: RoommateProfile[];
   myProfileId: string | null;
+  lookingForRoommates: boolean;
   setUnit: (unit: HousingUnit) => void;
   addMemberToUnit: (member: { budgetMin: number; budgetMax: number; dealbreakers: Dealbreaker[] }) => void;
   addPin: (pin: Pin) => void;
@@ -29,6 +30,7 @@ interface AppState {
   getPinById: (pinId: string) => Pin | undefined;
   addRoommateProfile: (profile: RoommateProfile) => void;
   setMyProfileId: (id: string) => void;
+  setLookingForRoommates: (v: boolean) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -38,6 +40,7 @@ const STORAGE_KEY_TRACKED = "pinpoint_tracked";
 const STORAGE_KEY_USER_PINS = "pinpoint_user_pins";
 const STORAGE_KEY_PROFILES = "pinpoint_profiles";
 const STORAGE_KEY_MY_PROFILE = "pinpoint_my_profile_id";
+const STORAGE_KEY_LOOKING = "pinpoint_looking_for_roommates";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [unit, setUnitState] = useState<HousingUnit | null>(null);
@@ -45,6 +48,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [userPins, setUserPins] = useState<Pin[]>([]);
   const [userProfiles, setUserProfiles] = useState<RoommateProfile[]>([]);
   const [myProfileId, setMyProfileIdState] = useState<string | null>(null);
+  const [lookingForRoommates, setLookingState] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // Merge seeded + user-added pins at runtime
@@ -69,6 +73,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedProfiles) setUserProfiles(JSON.parse(savedProfiles));
       const savedMyProfile = localStorage.getItem(STORAGE_KEY_MY_PROFILE);
       if (savedMyProfile) setMyProfileIdState(savedMyProfile);
+      const savedLooking = localStorage.getItem(STORAGE_KEY_LOOKING);
+      if (savedLooking !== null) {
+        setLookingState(savedLooking === "true");
+      } else {
+        // Default: ON if unit exists with exactly 1 member
+        const parsedUnit = savedUnit ? JSON.parse(savedUnit) : null;
+        setLookingState(!!parsedUnit && parsedUnit.members?.length === 1);
+      }
     } catch {
       // ignore parse errors
     }
@@ -113,6 +125,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [myProfileId, hydrated]);
 
+  // Persist lookingForRoommates
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY_LOOKING, String(lookingForRoommates));
+  }, [lookingForRoommates, hydrated]);
+
   const setUnit = useCallback((u: HousingUnit) => {
     setUnitState(u);
   }, []);
@@ -154,6 +172,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setMyProfileId = useCallback((id: string) => {
     setMyProfileIdState(id);
+  }, []);
+
+  const setLookingForRoommates = useCallback((v: boolean) => {
+    setLookingState(v);
   }, []);
 
   const getFitTag = useCallback(
@@ -209,6 +231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tracked,
         roommateProfiles,
         myProfileId,
+        lookingForRoommates,
         setUnit,
         addMemberToUnit,
         addPin,
@@ -219,6 +242,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getPinById,
         addRoommateProfile,
         setMyProfileId,
+        setLookingForRoommates,
       }}
     >
       {children}
