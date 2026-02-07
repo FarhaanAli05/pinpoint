@@ -48,3 +48,23 @@ export interface TrackedPin {
   status: TrackerStatus;
   addedAt: number; // timestamp
 }
+
+// --- Roommate Matchmaking ---
+
+export type LifestyleLevel = "low" | "medium" | "high";
+export type SleepSchedule = "early" | "medium" | "late";
+
+export interface RoommateProfile {
+  id: string;
+  name: string; // first name only
+  program?: string; // e.g. "Engineering, 2nd year"
+  budgetMin: number;
+  budgetMax: number;
+  moveInMonth: string; // e.g. "2025-09"
+  dealbreakers: Dealbreaker[];
+  cleanliness: LifestyleLevel;
+  sleepSchedule: SleepSchedule;
+  guests: LifestyleLevel;
+  aboutMe?: string;
+  createdAt: number; // timestamp
+}

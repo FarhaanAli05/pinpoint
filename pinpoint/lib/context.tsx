@@ -8,13 +8,17 @@ import {
   TrackerStatus,
   FitTag,
   Dealbreaker,
+  RoommateProfile,
 } from "./types";
 import { SEED_PINS } from "./seed-data";
+import { SEED_ROOMMATE_PROFILES } from "./roommate-seed";
 
 interface AppState {
   unit: HousingUnit | null;
   pins: Pin[];
   tracked: TrackedPin[];
+  roommateProfiles: RoommateProfile[];
+  myProfileId: string | null;
   setUnit: (unit: HousingUnit) => void;
   addMemberToUnit: (member: { budgetMin: number; budgetMax: number; dealbreakers: Dealbreaker[] }) => void;
   addPin: (pin: Pin) => void;
@@ -23,6 +27,8 @@ interface AppState {
   trackPin: (pinId: string, status: TrackerStatus) => void;
   getTrackedStatus: (pinId: string) => TrackerStatus | null;
   getPinById: (pinId: string) => Pin | undefined;
+  addRoommateProfile: (profile: RoommateProfile) => void;
+  setMyProfileId: (id: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -30,15 +36,25 @@ const AppContext = createContext<AppState | null>(null);
 const STORAGE_KEY_UNIT = "pinpoint_unit";
 const STORAGE_KEY_TRACKED = "pinpoint_tracked";
 const STORAGE_KEY_USER_PINS = "pinpoint_user_pins";
+const STORAGE_KEY_PROFILES = "pinpoint_profiles";
+const STORAGE_KEY_MY_PROFILE = "pinpoint_my_profile_id";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [unit, setUnitState] = useState<HousingUnit | null>(null);
   const [tracked, setTracked] = useState<TrackedPin[]>([]);
   const [userPins, setUserPins] = useState<Pin[]>([]);
+  const [userProfiles, setUserProfiles] = useState<RoommateProfile[]>([]);
+  const [myProfileId, setMyProfileIdState] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   // Merge seeded + user-added pins at runtime
   const pins = useMemo(() => [...SEED_PINS, ...userPins], [userPins]);
+
+  // Merge seeded + user-added roommate profiles
+  const roommateProfiles = useMemo(
+    () => [...SEED_ROOMMATE_PROFILES, ...userProfiles],
+    [userProfiles]
+  );
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -49,6 +65,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedTracked) setTracked(JSON.parse(savedTracked));
       const savedUserPins = localStorage.getItem(STORAGE_KEY_USER_PINS);
       if (savedUserPins) setUserPins(JSON.parse(savedUserPins));
+      const savedProfiles = localStorage.getItem(STORAGE_KEY_PROFILES);
+      if (savedProfiles) setUserProfiles(JSON.parse(savedProfiles));
+      const savedMyProfile = localStorage.getItem(STORAGE_KEY_MY_PROFILE);
+      if (savedMyProfile) setMyProfileIdState(savedMyProfile);
     } catch {
       // ignore parse errors
     }
@@ -76,6 +96,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY_USER_PINS, JSON.stringify(userPins));
   }, [userPins, hydrated]);
+
+  // Persist roommate profiles to localStorage
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(userProfiles));
+  }, [userProfiles, hydrated]);
+
+  // Persist my profile id
+  useEffect(() => {
+    if (!hydrated) return;
+    if (myProfileId) {
+      localStorage.setItem(STORAGE_KEY_MY_PROFILE, myProfileId);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_MY_PROFILE);
+    }
+  }, [myProfileId, hydrated]);
 
   const setUnit = useCallback((u: HousingUnit) => {
     setUnitState(u);
@@ -110,6 +146,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addPin = useCallback((pin: Pin) => {
     setUserPins((prev) => [...prev, pin]);
+  }, []);
+
+  const addRoommateProfile = useCallback((profile: RoommateProfile) => {
+    setUserProfiles((prev) => [...prev, profile]);
+  }, []);
+
+  const setMyProfileId = useCallback((id: string) => {
+    setMyProfileIdState(id);
   }, []);
 
   const getFitTag = useCallback(
@@ -163,6 +207,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         unit,
         pins,
         tracked,
+        roommateProfiles,
+        myProfileId,
         setUnit,
         addMemberToUnit,
         addPin,
@@ -171,6 +217,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         trackPin,
         getTrackedStatus,
         getPinById,
+        addRoommateProfile,
+        setMyProfileId,
       }}
     >
       {children}

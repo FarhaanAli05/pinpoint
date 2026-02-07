@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useApp } from "@/lib/context";
 import { Pin, FitTag } from "@/lib/types";
 import { UnitSummary } from "@/components/UnitSummary";
@@ -70,6 +71,20 @@ export default function MapPage() {
               </svg>
               Add Listing
             </button>
+
+            {/* Roommate matches link */}
+            <Link
+              href="/roommates"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-muted transition-colors hover:border-primary hover:bg-primary-light hover:text-primary"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="5.5" cy="5" r="2.5" />
+                <circle cx="10.5" cy="5" r="2.5" />
+                <path d="M1 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" />
+                <path d="M11 10c2 0 4 1.5 4 4" />
+              </svg>
+              Find Roommates
+            </Link>
 
             {/* Filter controls */}
             {unit && (

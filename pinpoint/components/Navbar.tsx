@@ -23,6 +23,9 @@ export function Navbar() {
         <NavLink href="/tracker" current={pathname}>
           Tracker
         </NavLink>
+        <NavLink href="/roommates" current={pathname}>
+          Roommates
+        </NavLink>
         {unit && (
           <span className="rounded-full bg-primary-light px-3 py-1 text-xs text-primary">
             {unit.members.length} member{unit.members.length !== 1 && "s"}

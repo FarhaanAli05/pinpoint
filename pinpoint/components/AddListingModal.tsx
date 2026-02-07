@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Pin, PinType } from "@/lib/types";
 import { useApp } from "@/lib/context";
-import { QUEENS_CAMPUS } from "@/lib/seed-data";
 
 interface AddListingModalProps {
   onClose: () => void;
@@ -18,7 +17,18 @@ const FEATURE_OPTIONS = [
   { value: "pet-free", label: "Pet-free" },
   { value: "smoking-free", label: "Smoke-free" },
   { value: "smoking-allowed", label: "Smoking allowed" },
+  { value: "laundry", label: "Laundry" },
+  { value: "parking", label: "Parking" },
+  { value: "furnished", label: "Furnished" },
 ];
+
+// Preset neighborhood locations near Queen's
+const LOCATION_PRESETS = [
+  { label: "Near Queen's Campus", lat: 44.2253, lng: -76.4951 },
+  { label: "West End / Portsmouth", lat: 44.2280, lng: -76.5100 },
+  { label: "Downtown Kingston", lat: 44.2312, lng: -76.4860 },
+  { label: "Williamsville / North", lat: 44.2380, lng: -76.4920 },
+] as const;
 
 export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const { unit, addPin } = useApp();
@@ -29,6 +39,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const [manualMode, setManualMode] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState("");
+  const [parseSuccess, setParseSuccess] = useState(false);
 
   // Step 2 (confirm) state — fields the user can edit
   const [title, setTitle] = useState("");
@@ -41,6 +52,12 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
   const [features, setFeatures] = useState<string[]>([]);
   const [sourceLabel, setSourceLabel] = useState("");
 
+  // Location selection
+  const [locationMode, setLocationMode] = useState<"preset" | "drop">("preset");
+  const [selectedPreset, setSelectedPreset] = useState(0);
+  const [dropLat, setDropLat] = useState("");
+  const [dropLng, setDropLng] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
 
   async function handleParseUrl() {
@@ -52,6 +69,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
 
     setParsing(true);
     setParseError("");
+    setParseSuccess(false);
 
     try {
       const res = await fetch("/api/parse-listing", {
@@ -64,15 +82,47 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
 
       const data = await res.json();
 
-      // Pre-fill whatever we could extract
-      if (data.title) setTitle(data.title);
-      if (data.rent) setRent(String(data.rent));
-      if (data.moveInDate) setMoveInDate(data.moveInDate);
+      // Track how many fields we could auto-fill
+      let filledCount = 0;
+
+      if (data.title) { setTitle(data.title); filledCount++; }
+      if (data.rent) { setRent(String(data.rent)); filledCount++; }
+      if (data.moveInDate) { setMoveInDate(data.moveInDate); filledCount++; }
       if (data.sourceLabel) setSourceLabel(data.sourceLabel);
+      if (data.addressText) { setAddress(data.addressText); filledCount++; }
+      if (data.description) { setDescription(data.description); filledCount++; }
+      if (data.bedrooms) { setBedrooms(String(data.bedrooms)); filledCount++; }
+      if (data.furnished === true) {
+        setFeatures((prev) => prev.includes("furnished") ? prev : [...prev, "furnished"]);
+      }
+      if (data.features?.length) {
+        // Map parsed features to our known feature set where possible
+        const mapped: string[] = [];
+        for (const f of data.features as string[]) {
+          const lower = f.toLowerCase();
+          if (lower.includes("laundry")) mapped.push("laundry");
+          else if (lower.includes("parking")) mapped.push("parking");
+          else if (lower.includes("quiet")) mapped.push("quiet");
+          else if (lower.includes("furnish")) mapped.push("furnished");
+          else if (lower.includes("pet") && lower.includes("friendly")) mapped.push("pet-friendly");
+          else if (lower.includes("pet") && lower.includes("free")) mapped.push("pet-free");
+          else if (lower.includes("smoke") && lower.includes("free")) mapped.push("smoking-free");
+          else if (lower.includes("smok") && lower.includes("allow")) mapped.push("smoking-allowed");
+        }
+        if (mapped.length) {
+          setFeatures((prev) => Array.from(new Set([...prev, ...mapped])));
+          filledCount++;
+        }
+      }
+
+      if (filledCount > 0) {
+        setParseSuccess(true);
+      } else {
+        setParseError("Couldn't extract details — please enter them below.");
+      }
 
       setStep("confirm");
     } catch {
-      // Graceful fallback: let the user fill in details manually
       setParseError("Couldn't extract details — please enter them below.");
       setStep("confirm");
     } finally {
@@ -86,19 +136,29 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
     );
   }
 
+  function getCoordinates(): { lat: number; lng: number } {
+    if (locationMode === "drop" && dropLat && dropLng) {
+      const lat = parseFloat(dropLat);
+      const lng = parseFloat(dropLng);
+      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+    }
+    // Use preset with small jitter so multiple pins don't stack
+    const preset = LOCATION_PRESETS[selectedPreset];
+    const jitterLat = (Math.random() - 0.5) * 0.004;
+    const jitterLng = (Math.random() - 0.5) * 0.006;
+    return { lat: preset.lat + jitterLat, lng: preset.lng + jitterLng };
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
 
-    // Place pin near campus with a small random offset so it's visible
-    // In production, geocoding from the address would give real coordinates
-    const jitterLat = (Math.random() - 0.5) * 0.008;
-    const jitterLng = (Math.random() - 0.5) * 0.012;
+    const coords = getCoordinates();
 
     const pin: Pin = {
       id: `user-${crypto.randomUUID()}`,
-      lat: QUEENS_CAMPUS.lat + jitterLat,
-      lng: QUEENS_CAMPUS.lng + jitterLng,
+      lat: coords.lat,
+      lng: coords.lng,
       rent: Number(rent) || 0,
       moveInDate: moveInDate || "2025-09-01",
       type: pinType,
@@ -170,7 +230,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                 disabled={parsing}
                 className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
               >
-                {parsing ? "Parsing..." : url.trim() ? "Fetch Details" : "Skip — Enter Manually"}
+                {parsing ? "Fetching details..." : url.trim() ? "Auto-fill from URL" : "Skip — Enter Manually"}
               </button>
             </div>
 
@@ -194,6 +254,11 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
         {/* Step 2: Confirm / Manual entry */}
         {step === "confirm" && (
           <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-5">
+            {parseSuccess && (
+              <p className="mb-3 rounded-lg bg-green-50 p-2 text-xs text-green-700">
+                Auto-filled from {sourceLabel || "URL"}. Review and edit as needed.
+              </p>
+            )}
             {parseError && (
               <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
                 {parseError}
@@ -254,6 +319,76 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                   placeholder="e.g. 123 University Ave, Kingston"
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
+              </div>
+
+              {/* Location picker */}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-muted uppercase tracking-wide">
+                  Pin Location
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setLocationMode("preset")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      locationMode === "preset"
+                        ? "bg-primary text-white"
+                        : "bg-gray-100 text-muted hover:bg-gray-200"
+                    }`}
+                  >
+                    Choose area
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocationMode("drop")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      locationMode === "drop"
+                        ? "bg-primary text-white"
+                        : "bg-gray-100 text-muted hover:bg-gray-200"
+                    }`}
+                  >
+                    Enter coordinates
+                  </button>
+                </div>
+
+                {locationMode === "preset" ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {LOCATION_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedPreset(idx)}
+                        className={`rounded-lg border px-2.5 py-2 text-xs text-left transition-colors ${
+                          selectedPreset === idx
+                            ? "border-primary bg-primary-light text-primary font-medium"
+                            : "border-border text-muted hover:border-primary/30"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={dropLat}
+                      onChange={(e) => setDropLat(e.target.value)}
+                      placeholder="Latitude (e.g. 44.225)"
+                      className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="text"
+                      value={dropLng}
+                      onChange={(e) => setDropLng(e.target.value)}
+                      placeholder="Longitude (e.g. -76.495)"
+                      className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="col-span-2 text-xs text-muted/70">
+                      Tip: Right-click on Google Maps to copy coordinates
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -337,6 +472,7 @@ export function AddListingModal({ onClose, onAdded }: AddListingModalProps) {
                 onClick={() => {
                   setStep("input");
                   setParseError("");
+                  setParseSuccess(false);
                 }}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
               >
