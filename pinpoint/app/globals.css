@@ -1,36 +1,63 @@
 @import "tailwindcss";
 
+/* ── Light mode (default) ── */
 :root {
-  /* Background layers: deep → surface → elevated */
+  --background: #ffffff;
+  --foreground: #09090b;
+  --surface: #f4f4f5;
+  --surface-elevated: #e4e4e7;
+
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: rgba(99, 102, 241, 0.1);
+  --primary-muted: rgba(99, 102, 241, 0.5);
+
+  --accent: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  --muted: #52525b;
+  --muted-subtle: #a1a1aa;
+
+  --border: #e4e4e7;
+  --border-subtle: #d4d4d8;
+
+  --card: #f4f4f5;
+  --card-hover: #e4e4e7;
+
+  --fit-great: #10b981;
+  --fit-great-bg: rgba(16, 185, 129, 0.1);
+  --fit-ok: #6366f1;
+  --fit-ok-bg: rgba(99, 102, 241, 0.1);
+  --fit-conflict: #ef4444;
+  --fit-conflict-bg: rgba(239, 68, 68, 0.1);
+}
+
+/* ── Dark mode ── */
+html.dark {
   --background: #09090b;
   --foreground: #fafafa;
   --surface: #18181b;
   --surface-elevated: #27272a;
 
-  /* Primary (indigo) */
   --primary: #818cf8;
   --primary-hover: #6366f1;
   --primary-light: rgba(129, 140, 248, 0.1);
   --primary-muted: rgba(129, 140, 248, 0.5);
 
-  /* Semantic */
   --accent: #34d399;
   --danger: #f87171;
   --warning: #fbbf24;
 
-  /* Text hierarchy */
   --muted: #a1a1aa;
   --muted-subtle: #71717a;
 
-  /* Borders */
   --border: #27272a;
   --border-subtle: #3f3f46;
 
-  /* Cards / panels */
   --card: #18181b;
   --card-hover: #1f1f23;
 
-  /* Fit tag colors (dark-mode adjusted) */
   --fit-great: #34d399;
   --fit-great-bg: rgba(52, 211, 153, 0.12);
   --fit-ok: #818cf8;
@@ -88,7 +115,7 @@ body {
   background: var(--surface-elevated) !important;
 }
 .leaflet-control-attribution {
-  background: rgba(9, 9, 11, 0.8) !important;
+  background: var(--surface) !important;
   color: var(--muted-subtle) !important;
   font-size: 10px !important;
 }

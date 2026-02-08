@@ -48,6 +48,9 @@ export function LeftSidebar() {
   const { theme, toggleTheme } = useTheme();
   const { data: session, signOut: doSignOut } = useSession();
 
+  // Hide sidebar on the landing page
+  if (pathname === "/") return null;
+
   return (
     <aside className="fixed left-0 top-0 z-50 h-screen w-16 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col items-center py-4 gap-4">
       <Link

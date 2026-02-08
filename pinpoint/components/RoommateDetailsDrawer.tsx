@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { RoommateProfile } from "@/lib/types";
 import { MatchResult } from "@/lib/roommate-match";
-import { useApp } from "@/lib/context";
-
 interface RoommateDetailsDrawerProps {
   match: MatchResult;
   myProfile: RoommateProfile;
@@ -16,7 +14,6 @@ export function RoommateDetailsDrawer({
   myProfile,
   onClose,
 }: RoommateDetailsDrawerProps) {
-  const { unit } = useApp();
   const [generatingMessage, setGeneratingMessage] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -60,9 +57,7 @@ export function RoommateDetailsDrawer({
   }
 
   function handleInvite() {
-    const inviteText = unit
-      ? `Hey ${match.profile.name}! I'm ${myProfile.name} from Pinpoint. We're looking for roommates for our housing unit (${unit.members.length} member${unit.members.length !== 1 ? "s" : ""}, move-in ${unit.moveInMonth}). Join us: ${window.location.origin}/join/${unit.code}`
-      : `Hey ${match.profile.name}! I'm ${myProfile.name} from Pinpoint. Want to team up and look for housing together?`;
+    const inviteText = `Hey ${match.profile.name}! I'm ${myProfile.name} from Pinpoint. Want to team up and look for housing together?`;
     navigator.clipboard.writeText(inviteText);
     setCopied("invite");
     setTimeout(() => setCopied(null), 2000);

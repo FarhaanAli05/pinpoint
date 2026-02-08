@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import Link from "next/link";
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -90,10 +88,10 @@ export default function LandingPage() {
           transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
           className="relative z-10 mx-auto max-w-3xl text-center"
         >
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface/80 px-4 py-1.5 text-xs text-muted backdrop-blur-sm">
+          {/* <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface/80 px-4 py-1.5 text-xs text-muted backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
             Built for students finding housing together
-          </div>
+          </div> */}
 
           <h1 className="mb-6 font-mono text-5xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-7xl">
             Housing decisions,
@@ -102,13 +100,13 @@ export default function LandingPage() {
           </h1>
 
           <p className="mx-auto mb-10 max-w-lg text-lg leading-relaxed text-muted">
-            A coordination layer for group housing. Form your unit, map what fits,
-            and reach out — together.
+            A coordination layer for group housing. Form your unit, map
+            what fits, and reach out together.
           </p>
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/onboarding"
+              href="/auth/signin?callbackUrl=%2Fonboarding"
               className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
             >
               Get Started
@@ -117,7 +115,7 @@ export default function LandingPage() {
               </svg>
             </Link>
             <Link
-              href="/map"
+              href="/listings/map"
               className="inline-flex h-12 items-center justify-center rounded-lg border border-border-subtle px-8 text-base font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface"
             >
               Explore Demo
@@ -281,17 +279,27 @@ export default function LandingPage() {
             Ready to coordinate?
           </h2>
           <p className="mb-8 text-muted">
-            Set up your housing unit in under a minute. No accounts, no data stored remotely — everything stays in your browser.
+            Set up your housing unit in under a minute. No accounts required to browse.
+            <br />
+            Sign in to save, post, and contact landlords.
           </p>
-          <Link
-            href="/onboarding"
-            className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
-          >
-            Create Your Unit
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/onboarding"
+              className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
+            >
+              Create Your Unit
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href="/listings/map"
+              className="inline-flex h-12 items-center justify-center rounded-lg border border-border-subtle px-8 text-base font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface"
+            >
+              Browse Listings
+            </Link>
+          </div>
           <p className="mt-6 text-xs text-muted-subtle">
             No sign-up required. Your data stays local.
           </p>
@@ -301,7 +309,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border py-8 text-center">
         <p className="font-mono text-xs text-muted-subtle">
-          pinpoint &mdash; student housing, together
+          pinpoint &middot; student housing, together
         </p>
       </footer>
     </div>
