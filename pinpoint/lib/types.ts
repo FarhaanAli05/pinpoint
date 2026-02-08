@@ -55,6 +55,8 @@ export interface Pin {
   title: string;
   description: string;
   address: string;
+  /** Postal code (e.g. Canadian "K7L 3V5") */
+  postalCode?: string;
   bedrooms: number;
   features: string[]; // e.g. ["pet-friendly", "smoking-allowed", "quiet"]
   /** For share-listing: original URL they pasted */

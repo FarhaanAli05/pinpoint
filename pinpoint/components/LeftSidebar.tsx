@@ -78,8 +78,8 @@ export function LeftSidebar() {
           <HomeIcon />
         </Link>
         <Link
-          href="/listings"
-          aria-label="Listings"
+          href="/listings/map"
+          aria-label="Listings map"
           className={`flex items-center justify-center w-12 h-12 rounded-none border transition-colors ${
             pathname.startsWith("/listings") ? "border-zinc-400 dark:border-zinc-700 bg-zinc-200 dark:bg-white/10 text-zinc-950 dark:text-white" : "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white"
           }`}
@@ -140,13 +140,6 @@ export function LeftSidebar() {
             </svg>
           </Link>
         )}
-        <Link
-          href="/"
-          aria-label="Exit to landing"
-          className="flex items-center justify-center w-12 h-12 rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white transition-colors mt-4"
-        >
-          <LogOutIcon />
-        </Link>
       </div>
     </aside>
   );

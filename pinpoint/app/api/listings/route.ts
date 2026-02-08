@@ -26,6 +26,7 @@ interface PropertyListingJson {
   title: string;
   description?: string;
   address: string;
+  postalCode?: string;
   bedrooms: number;
   features?: string[];
   externalLink?: string;
@@ -52,6 +53,7 @@ function jsonToPin(d: PropertyListingJson): Pin | null {
     title: d.title ?? "",
     description: d.description ?? "",
     address,
+    postalCode: d.postalCode,
     bedrooms: d.bedrooms ?? 1,
     features: Array.isArray(d.features) ? d.features : [],
     externalLink: d.externalLink,

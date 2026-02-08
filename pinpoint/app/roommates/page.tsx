@@ -195,7 +195,7 @@ export default function RoommatesMapPage() {
       </div>
       <div className="fixed top-4 right-4 z-30 flex items-center gap-2">
         <RoommateMapLegend />
-        <Link href="/listings/map" className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+        <Link href="/listings/map" className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-sm" title="View rooms & places on the map">
           Listings
         </Link>
       </div>

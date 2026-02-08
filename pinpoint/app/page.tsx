@@ -42,7 +42,7 @@ export default function HomePage() {
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </Link>
-        <Link href="/auth/signin?callbackUrl=/listings" className="mt-4 text-sm text-zinc-500 dark:text-white/50 hover:underline">
+        <Link href="/auth/signin?callbackUrl=/listings/map" className="mt-4 text-sm text-zinc-500 dark:text-white/50 hover:underline">
           Already have an account? Sign in
         </Link>
       </main>

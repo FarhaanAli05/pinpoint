@@ -82,7 +82,7 @@ function createPinIcon(category: ListingCategory, selected: boolean, _isDark: bo
     ">${meStyle ? "me" : ""}</span>
   </div>`;
   return L.divIcon({
-    className: "",
+    className: "pin-marker-icon",
     html,
     iconSize: [total, total],
     iconAnchor: [total / 2, total / 2],
@@ -105,7 +105,8 @@ export default function MapView({
   const isDark = theme === "dark";
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const markersByIdRef = useRef<Map<string, L.Marker>>(new Map());
+  const prevPinsRef = useRef<Pin[]>([]);
   const boundaryLayerRef = useRef<L.Polygon | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onDoubleClickRef = useRef(onMapDoubleClick);
@@ -183,7 +184,54 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
+
+    const prevPins = prevPinsRef.current;
+    const pinsChanged =
+      prevPins.length !== pins.length || pins.some((p, i) => p.id !== prevPins[i]?.id);
+    prevPinsRef.current = pins;
+
+    const tooltipTitle = isDark ? "#fafafa" : "#18181b";
+    const tooltipSub = isDark ? "#a1a1aa" : "#52525b";
+
+    if (pinsChanged) {
+      const toRemove = markersByIdRef.current;
+      markersByIdRef.current = new Map();
+      toRemove.forEach((m) => {
+        try {
+          m.off();
+          m.unbindTooltip?.();
+          m.closeTooltip?.();
+          if (map.hasLayer(m)) m.remove();
+        } catch (_) {}
+      });
+
+      pins.forEach((pin) => {
+        const isSelected = pin.id === selectedPinId;
+        const isMe = !!pin.isMe;
+        const marker = L.marker([pin.lat, pin.lng], {
+          icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
+        })
+          .bindTooltip(
+            `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
+            { direction: "top", offset: [0, -12], className: "!border !text-left" }
+          )
+          .on("click", (e: L.LeafletMouseEvent) => {
+            L.DomEvent.stopPropagation(e.originalEvent);
+            onPinClick(pin);
+          })
+          .addTo(map);
+        markersByIdRef.current.set(pin.id, marker);
+      });
+    } else {
+      pins.forEach((pin) => {
+        const marker = markersByIdRef.current.get(pin.id);
+        if (marker) {
+          const isSelected = pin.id === selectedPinId;
+          const isMe = !!pin.isMe;
+          marker.setIcon(createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor));
+        }
+      });
+    }
 
     const boundary = boundaryLayerRef.current;
     if (boundary && map.hasLayer(boundary)) {
@@ -191,15 +239,7 @@ export default function MapView({
     }
     boundaryLayerRef.current = null;
 
-    const toRemove = markersRef.current;
-    markersRef.current = [];
-    toRemove.forEach((m) => {
-      try {
-        m.closeTooltip?.();
-        if (map.hasLayer(m)) m.remove();
-      } catch (_) {}
-    });
-
+    const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
     if (selectedPin?.boundary?.length) {
       const latlngs = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
       const fill = isDark ? "rgba(20,184,166,0.12)" : "rgba(20,184,166,0.15)";
@@ -212,27 +252,6 @@ export default function MapView({
       }).addTo(map);
       boundaryLayerRef.current = polygon;
     }
-
-    const tooltipTitle = isDark ? "#fafafa" : "#18181b";
-    const tooltipSub = isDark ? "#a1a1aa" : "#52525b";
-
-    pins.forEach((pin) => {
-      const isSelected = pin.id === selectedPinId;
-      const isMe = !!pin.isMe;
-      const marker = L.marker([pin.lat, pin.lng], {
-        icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
-      })
-        .bindTooltip(
-          `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
-          { direction: "top", offset: [0, -12], className: "!border !text-left" }
-        )
-        .on("click", (e: L.LeafletMouseEvent) => {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          onPinClick(pin);
-        })
-        .addTo(map);
-      markersRef.current.push(marker);
-    });
   }, [pins, onPinClick, selectedPinId, isDark, uniformPinColor]);
 
   useEffect(() => {

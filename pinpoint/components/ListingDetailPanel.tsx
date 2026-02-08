@@ -58,7 +58,10 @@ export function ListingDetailPanel({ pin, onClose, onDelete }: ListingDetailPane
             {CATEGORY_LABELS[pin.category]}
           </span>
           <h2 className="text-lg font-semibold text-zinc-950 dark:text-white truncate">{pin.title}</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{pin.areaLabel || pin.address}</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {pin.areaLabel || pin.address}
+            {pin.postalCode ? ` · ${pin.postalCode}` : ""}
+          </p>
         </div>
         <button
           onClick={onClose}

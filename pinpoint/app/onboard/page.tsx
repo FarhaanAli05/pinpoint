@@ -34,7 +34,7 @@ export default function OnboardPage() {
     try {
       const done = localStorage.getItem(STORAGE_KEY);
       if (done === "1") {
-        router.replace("/listings");
+        router.replace("/listings/map");
       }
     } catch {
       // ignore
@@ -77,7 +77,7 @@ export default function OnboardPage() {
       } catch {
         // ignore
       }
-      router.replace("/listings");
+      router.replace("/listings/map");
     } catch {
       setError("Something went wrong.");
       setSubmitting(false);
