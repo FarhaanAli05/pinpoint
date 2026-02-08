@@ -1,5 +1,6 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**Pinpoint** — Room and roommates on one map. Flow: Sign in with Google → onboarding (verified email, where, from when) → Listings → "Looking for teammate" → Roommates map. Two maps: Listings (rooms only), Roommates (people only). Listings data: placeholder in `/api/listings` and `lib/mock-listings.ts`. Env: `.env.example` has NEXTAUTH_* and GOOGLE_* for sign-in.
 ## Getting Started
 
 First, run the development server:

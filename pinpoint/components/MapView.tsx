@@ -3,278 +3,265 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Pin, FitTag } from "@/lib/types";
-import { MatchResult } from "@/lib/roommate-match";
+import { Pin, ListingCategory } from "@/lib/types";
 import { QUEENS_CAMPUS } from "@/lib/seed-data";
+import { useTheme } from "@/lib/theme";
 
-const FIT_COLORS: Record<FitTag, string> = {
-  Great: "#34d399",
-  OK: "#818cf8",
-  Conflict: "#f87171",
+const CATEGORY_LABELS: Record<ListingCategory, string> = {
+  sublet: "Sublet",
+  "share-listing": "Share listing",
+  "looking-for-roommates": "Looking for roommates",
+  "looking-for-room-and-roommate": "Looking for room + roommate",
+  "have-room-need-roommates": "Have room, need people",
+  "sublet-room": "Subletting a room",
 };
 
-function roommateLatLng(profileId: string): [number, number] {
-  let hash = 0;
-  for (let i = 0; i < profileId.length; i++) {
-    hash = (hash * 31 + profileId.charCodeAt(i)) | 0;
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Glow is subtle: small blur, low opacity. "Me" pin: yellow + person style. */
+function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean, uniformColor?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
+  if (isMe) {
+    const scale = selected ? 1.2 : 1;
+    const size = Math.round(14 * scale);
+    return { bg: "#eab308", glow: "rgba(234,179,8,0.45)", size, isMe: true };
   }
-  const latOff = ((((hash >>> 0) % 1600) - 800) / 100000);
-  const lngOff = ((((hash >>> 8) % 1600) - 800) / 100000);
-  return [QUEENS_CAMPUS.lat + latOff, QUEENS_CAMPUS.lng + lngOff];
+  const scale = selected ? 1.2 : 1;
+  const size = Math.round(12 * scale);
+  if (uniformColor) {
+    return { bg: "#14b8a6", glow: "rgba(20,184,166,0.35)", size };
+  }
+  if (category === "looking-for-roommates" || category === "looking-for-room-and-roommate") {
+    return { bg: "#ef4444", glow: "rgba(239,68,68,0.35)", size };
+  }
+  if (category === "have-room-need-roommates") {
+    return { bg: "#3b82f6", glow: "rgba(59,130,246,0.35)", size };
+  }
+  if (category === "sublet-room") {
+    return { bg: "#8b5cf6", glow: "rgba(139,92,246,0.35)", size };
+  }
+  if (category === "sublet") {
+    return { bg: "#22c55e", glow: "rgba(34,197,94,0.35)", size };
+  }
+  return { bg: "#14b8a6", glow: "rgba(20,184,166,0.35)", size };
 }
 
-export interface MapViewProps {
+interface MapViewProps {
   pins: Pin[];
-  getFitTag: (pin: Pin) => FitTag;
   onPinClick: (pin: Pin) => void;
-  selectedPinId?: string;
-  showRoommateLayer: boolean;
-  roommateMatches: MatchResult[];
-  selectedRoommateId?: string | null;
-  onRoommateClick: (match: MatchResult) => void;
-  showAnchor: boolean;
+  selectedPinId?: string | null;
+  /** Double-click on map to add yourself here */
+  onMapDoubleClick?: (lat: number, lng: number) => void;
+  /** Click on map (not on a marker) — e.g. close detail panel and boundaries */
+  onMapClick?: () => void;
+  /** Center map on this point (e.g. user's chosen area from onboarding) */
+  initialCenter?: { lat: number; lng: number };
+  /** Animate zoom-in to initialCenter when provided */
+  animateZoom?: boolean;
+  /** When true, fit map bounds to show all pins (with padding) */
+  fitBoundsToPins?: boolean;
+  /** When set, fly map to this center (e.g. after search) */
+  flyToCenter?: { lat: number; lng: number } | null;
+  /** When true, use a single color for all pins (listings view, not roommate categories) */
+  uniformPinColor?: boolean;
 }
 
-function createPinIcon(color: string, selected: boolean) {
-  const size = selected ? 20 : 14;
-  const strokeWidth = selected ? 3 : 2;
-  return L.divIcon({
-    className: "",
-    html: `<div style="
+function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean, uniformColor?: boolean) {
+  const { bg, glow, size, isMe: meStyle } = getGlowDotStyle(category, selected, isMe, uniformColor);
+  const total = size + 8;
+  const blur = 4;
+  const spread = 2;
+  const html = `<div style="
+    width:${total}px;height:${total}px;
+    display:flex;align-items:center;justify-content:center;
+  ">
+    <span style="
       width:${size}px;height:${size}px;
-      background:${color};
-      border:${strokeWidth}px solid rgba(255,255,255,0.9);
       border-radius:50%;
-      box-shadow:0 0 ${selected ? '12' : '6'}px ${color}80, 0 2px 4px rgba(0,0,0,0.4);
-      ${selected ? "transform:scale(1.2);" : ""}
-      transition: transform 150ms ease-out, box-shadow 150ms ease-out;
-    "></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
-}
-
-function createCampusIcon() {
+      background:${bg};
+      box-shadow: 0 0 ${blur}px ${spread}px ${glow};
+      border:2px solid rgba(255,255,255,0.9);
+      ${meStyle ? "font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;color:#1c1917;" : ""}
+    ">${meStyle ? "me" : ""}</span>
+  </div>`;
   return L.divIcon({
-    className: "",
-    html: `<div style="
-      display:flex;align-items:center;justify-content:center;
-      width:32px;height:32px;
-      background:#818cf8;color:#09090b;
-      border-radius:8px;font-size:14px;font-weight:bold;
-      box-shadow:0 0 12px rgba(129,140,248,0.4), 0 2px 6px rgba(0,0,0,0.4);
-      border:2px solid rgba(255,255,255,0.8);
-      font-family:var(--font-geist-mono),monospace;
-    ">Q</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    className: "pin-marker-icon",
+    html,
+    iconSize: [total, total],
+    iconAnchor: [total / 2, total / 2],
   });
-}
-
-function createAnchorIcon() {
-  return L.divIcon({
-    className: "",
-    html: `<div style="
-      display:flex;align-items:center;justify-content:center;
-      width:28px;height:28px;
-      background:#34d399;color:#09090b;
-      border-radius:50%;font-size:10px;font-weight:bold;
-      box-shadow:0 0 10px rgba(52,211,153,0.4), 0 2px 6px rgba(0,0,0,0.4);
-      border:2px solid rgba(255,255,255,0.8);
-      font-family:var(--font-geist-mono),monospace;
-    ">You</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  });
-}
-
-function createRoommateIcon(initial: string, selected: boolean, score: number) {
-  const size = selected ? 26 : 22;
-  const strokeWidth = selected ? 3 : 2;
-  const bg = score >= 80 ? "#34d399" : score >= 60 ? "#818cf8" : "#71717a";
-  return L.divIcon({
-    className: "",
-    html: `<div style="
-      display:flex;align-items:center;justify-content:center;
-      width:${size}px;height:${size}px;
-      background:${bg};color:#09090b;
-      border:${strokeWidth}px solid rgba(255,255,255,0.8);
-      border-radius:50%;
-      font-size:10px;font-weight:bold;
-      box-shadow:0 0 ${selected ? '10' : '4'}px ${bg}60, 0 2px 4px rgba(0,0,0,0.4);
-      ${selected ? "transform:scale(1.1);" : ""}
-      font-family:var(--font-geist-mono),monospace;
-    ">${initial}</div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
-}
-
-function getLineColor(score: number): string {
-  if (score >= 80) return "#34d399";
-  if (score >= 60) return "#818cf8";
-  return "#71717a";
 }
 
 export default function MapView({
   pins,
-  getFitTag,
   onPinClick,
   selectedPinId,
-  showRoommateLayer,
-  roommateMatches,
-  selectedRoommateId,
-  onRoommateClick,
-  showAnchor,
+  onMapDoubleClick,
+  onMapClick,
+  initialCenter,
+  animateZoom = false,
+  fitBoundsToPins = false,
+  flyToCenter,
+  uniformPinColor = false,
 }: MapViewProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
-  const roommateMarkersRef = useRef<L.Marker[]>([]);
-  const anchorMarkerRef = useRef<L.Marker | null>(null);
-  const polylineRef = useRef<L.Polyline | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const markersByIdRef = useRef<Map<string, L.Marker>>(new Map());
+  const prevPinsRef = useRef<Pin[]>([]);
+  const boundaryLayerRef = useRef<L.Polygon | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onDoubleClickRef = useRef(onMapDoubleClick);
+  const onMapClickRef = useRef(onMapClick);
+  onDoubleClickRef.current = onMapDoubleClick;
+  onMapClickRef.current = onMapClick;
+  const center = initialCenter ?? QUEENS_CAMPUS;
 
-  // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const startZoom = animateZoom ? 13 : 15;
     const map = L.map(containerRef.current, {
-      center: [QUEENS_CAMPUS.lat, QUEENS_CAMPUS.lng],
-      zoom: 15,
+      center: [center.lat, center.lng],
+      zoom: startZoom,
       zoomControl: true,
+      attributionControl: false,
     });
 
-    // Dark tile layer (CartoDB Dark Matter)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 19,
-    }).addTo(map);
+    const tileUrl = isDark
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
+    tileLayerRef.current = layer;
 
-    // Queen's campus marker
-    L.marker([QUEENS_CAMPUS.lat, QUEENS_CAMPUS.lng], {
-      icon: createCampusIcon(),
-    })
-      .bindTooltip("Queen's University", {
-        direction: "top",
-        offset: [0, -20],
-      })
-      .addTo(map);
+    if (onDoubleClickRef.current) {
+      map.on("dblclick", (e: L.LeafletMouseEvent) => {
+        const { lat, lng } = e.latlng;
+        onDoubleClickRef.current?.(lat, lng);
+      });
+    }
+    map.on("click", () => {
+      onMapClickRef.current?.();
+    });
 
     mapRef.current = map;
 
+    if (animateZoom) {
+      const t = setTimeout(() => {
+        map.flyTo([center.lat, center.lng], 15, { duration: 0.8 });
+      }, 100);
+      return () => {
+        clearTimeout(t);
+        map.remove();
+        mapRef.current = null;
+      };
+    }
+
     return () => {
+      tileLayerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [center.lat, center.lng, animateZoom]);
 
-  // Update listing markers
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !tileLayerRef.current) return;
+    const map = mapRef.current;
+    tileLayerRef.current.remove();
+    const tileUrl = isDark
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
+    tileLayerRef.current = layer;
+  }, [isDark]);
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    pins.forEach((pin) => {
-      const tag = getFitTag(pin);
-      const isSelected = pin.id === selectedPinId;
-      const marker = L.marker([pin.lat, pin.lng], {
-        icon: createPinIcon(FIT_COLORS[tag], isSelected),
-      })
-        .bindTooltip(
-          `<b>${pin.title}</b><br/>$${pin.rent}/mo · ${tag}`,
-          { direction: "top", offset: [0, -10] }
-        )
-        .on("click", () => onPinClick(pin))
-        .addTo(mapRef.current!);
-      markersRef.current.push(marker);
-    });
-  }, [pins, getFitTag, onPinClick, selectedPinId]);
-
-  // Update roommate markers
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !flyToCenter) return;
+    mapRef.current.flyTo([flyToCenter.lat, flyToCenter.lng], 15, { duration: 0.6 });
+  }, [flyToCenter?.lat, flyToCenter?.lng]);
 
-    roommateMarkersRef.current.forEach((m) => m.remove());
-    roommateMarkersRef.current = [];
-
-    if (!showRoommateLayer) return;
-
-    roommateMatches.forEach((match) => {
-      const [lat, lng] = roommateLatLng(match.profile.id);
-      const initial = match.profile.name.charAt(0).toUpperCase();
-      const isSelected = match.profile.id === selectedRoommateId;
-      const marker = L.marker([lat, lng], {
-        icon: createRoommateIcon(initial, isSelected, match.score),
-      })
-        .bindTooltip(
-          `<b>${match.profile.name}</b><br/>${match.score}% match`,
-          { direction: "top", offset: [0, -10] }
-        )
-        .on("click", () => onRoommateClick(match))
-        .addTo(mapRef.current!);
-      roommateMarkersRef.current.push(marker);
-    });
-  }, [showRoommateLayer, roommateMatches, selectedRoommateId, onRoommateClick]);
-
-  // Anchor pin (You)
   useEffect(() => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-    if (anchorMarkerRef.current) {
-      anchorMarkerRef.current.remove();
-      anchorMarkerRef.current = null;
+    const prevPins = prevPinsRef.current;
+    const pinsChanged =
+      prevPins.length !== pins.length || pins.some((p, i) => p.id !== prevPins[i]?.id);
+    prevPinsRef.current = pins;
+
+    if (pinsChanged) {
+      const toRemove = markersByIdRef.current;
+      markersByIdRef.current = new Map();
+      toRemove.forEach((m) => {
+        try {
+          m.off();
+          m.unbindTooltip?.();
+          m.closeTooltip?.();
+          if (map.hasLayer(m)) m.remove();
+        } catch (_) {}
+      });
+
+      pins.forEach((pin) => {
+        const isSelected = pin.id === selectedPinId;
+        const isMe = !!pin.isMe;
+        const marker = L.marker([pin.lat, pin.lng], {
+          icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
+        })
+          .bindTooltip(
+            `<div class="pin-tooltip__inner"><span class="pin-tooltip__title">${escapeHtml(pin.title)}</span><span class="pin-tooltip__sub">${escapeHtml(isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`)}</span></div>`,
+            { direction: "top", offset: [0, -14], className: `pin-tooltip pin-tooltip--${isDark ? "dark" : "light"}`, sticky: true }
+          )
+          .on("click", (e: L.LeafletMouseEvent) => {
+            L.DomEvent.stopPropagation(e.originalEvent);
+            onPinClick(pin);
+          })
+          .addTo(map);
+        markersByIdRef.current.set(pin.id, marker);
+      });
+    } else {
+      pins.forEach((pin) => {
+        const marker = markersByIdRef.current.get(pin.id);
+        if (marker) {
+          const isSelected = pin.id === selectedPinId;
+          const isMe = !!pin.isMe;
+          marker.setIcon(createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor));
+        }
+      });
     }
 
-    if (!showAnchor || !showRoommateLayer) return;
-
-    const anchor = L.marker([QUEENS_CAMPUS.lat, QUEENS_CAMPUS.lng], {
-      icon: createAnchorIcon(),
-      zIndexOffset: 1000,
-    })
-      .bindTooltip("You / Your Unit", {
-        direction: "top",
-        offset: [0, -16],
-      })
-      .addTo(mapRef.current);
-    anchorMarkerRef.current = anchor;
-  }, [showAnchor, showRoommateLayer]);
-
-  // Connection polyline
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    if (polylineRef.current) {
-      polylineRef.current.remove();
-      polylineRef.current = null;
+    const boundary = boundaryLayerRef.current;
+    if (boundary && map.hasLayer(boundary)) {
+      boundary.remove();
     }
+    boundaryLayerRef.current = null;
 
-    if (!showRoommateLayer || !selectedRoommateId) return;
-
-    const selectedMatch = roommateMatches.find(
-      (m) => m.profile.id === selectedRoommateId
-    );
-    if (!selectedMatch) return;
-
-    const [rLat, rLng] = roommateLatLng(selectedMatch.profile.id);
-    const color = getLineColor(selectedMatch.score);
-
-    const line = L.polyline(
-      [
-        [QUEENS_CAMPUS.lat, QUEENS_CAMPUS.lng],
-        [rLat, rLng],
-      ],
-      {
-        color,
+    const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
+    if (selectedPin?.boundary?.length) {
+      const latlngs = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
+      const fill = isDark ? "rgba(20,184,166,0.12)" : "rgba(20,184,166,0.15)";
+      const stroke = isDark ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.55)";
+      const polygon = L.polygon(latlngs, {
+        color: stroke,
         weight: 2,
-        opacity: 0.4,
-        dashArray: "6 4",
-      }
-    ).addTo(mapRef.current);
+        fillColor: fill,
+        fillOpacity: 1,
+      }).addTo(map);
+      boundaryLayerRef.current = polygon;
+    }
+  }, [pins, onPinClick, selectedPinId, isDark, uniformPinColor]);
 
-    polylineRef.current = line;
-  }, [showRoommateLayer, selectedRoommateId, roommateMatches]);
+  useEffect(() => {
+    if (!mapRef.current || !fitBoundsToPins || pins.length === 0) return;
+    const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
+    mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [pins, fitBoundsToPins]);
 
   return (
     <div

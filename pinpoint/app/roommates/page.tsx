@@ -1,487 +1,363 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { useApp } from "@/lib/context";
-import {
-  RoommateProfile,
-  Dealbreaker,
-  LifestyleLevel,
-  SleepSchedule,
-} from "@/lib/types";
-import { MatchResult, getTopMatches } from "@/lib/roommate-match";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { getRoommatePins, MOCK_ROOMMATES } from "@/lib/mock-roommates";
+import type { Pin } from "@/lib/types";
+import type { StudentProfile } from "@/lib/student-profiles";
+import { STUDENT_PROFILES } from "@/lib/student-profiles";
+import { StudentProfileDetailPanel } from "@/components/StudentProfileDetailPanel";
+import { RoommateMapLegend } from "@/components/RoommateMapLegend";
+import { AddUserPinModal } from "@/components/AddUserPinModal";
+import { AIInsightsSidebar, type AIRanking } from "@/components/AIInsightsSidebar";
 
-// --- Profile Form ---
+const MapView = dynamic(() => import("@/components/MapView"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-zinc-100 dark:bg-zinc-950 text-zinc-500 text-sm">Loading map...</div>
+  ),
+});
 
-function ProfileForm({
-  onSubmit,
-}: {
-  onSubmit: (profile: RoommateProfile) => void;
-}) {
-  const [name, setName] = useState("");
-  const [program, setProgram] = useState("");
-  const [budgetMin, setBudgetMin] = useState("600");
-  const [budgetMax, setBudgetMax] = useState("900");
-  const [moveInMonth, setMoveInMonth] = useState("2025-09");
-  const [dealbreakers, setDealbreakers] = useState<Dealbreaker[]>([]);
-  const [cleanliness, setCleanliness] = useState<LifestyleLevel>("medium");
-  const [sleepSchedule, setSleepSchedule] = useState<SleepSchedule>("medium");
-  const [guests, setGuests] = useState<LifestyleLevel>("medium");
-  const [aboutMe, setAboutMe] = useState("");
+const ROOMMATES_CATEGORIES = ["looking-for-roommates", "looking-for-room-and-roommate", "have-room-need-roommates", "sublet-room"];
 
-  function toggleDealbreaker(d: Dealbreaker) {
-    setDealbreakers((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
-    );
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const profile: RoommateProfile = {
-      id: `profile-${crypto.randomUUID()}`,
-      name: name.trim() || "Anonymous",
-      program: program.trim() || undefined,
-      budgetMin: Number(budgetMin) || 500,
-      budgetMax: Number(budgetMax) || 1000,
-      moveInMonth,
-      dealbreakers,
-      cleanliness,
-      sleepSchedule,
-      guests,
-      aboutMe: aboutMe.trim() || undefined,
-      createdAt: Date.now(),
-    };
-    onSubmit(profile);
-  }
-
-  const DEALBREAKER_OPTIONS: { value: Dealbreaker; label: string }[] = [
-    { value: "pet-free", label: "Pet-free" },
-    { value: "smoking-free", label: "Smoke-free" },
-    { value: "quiet", label: "Quiet" },
-  ];
-
-  const LEVEL_OPTIONS: { value: LifestyleLevel; label: string }[] = [
-    { value: "low", label: "Low" },
-    { value: "medium", label: "Medium" },
-    { value: "high", label: "High" },
-  ];
-
-  const SLEEP_OPTIONS: { value: SleepSchedule; label: string }[] = [
-    { value: "early", label: "Early bird" },
-    { value: "medium", label: "Average" },
-    { value: "late", label: "Night owl" },
-  ];
-
-  const inputClass = "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
-
-  return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-4">
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          First Name *
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your first name"
-          required
-          className={inputClass}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Program / Year (optional)
-        </label>
-        <input
-          type="text"
-          value={program}
-          onChange={(e) => setProgram(e.target.value)}
-          placeholder="e.g. Engineering, 2nd year"
-          className={inputClass}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-            Budget Min ($/mo)
-          </label>
-          <input
-            type="number"
-            value={budgetMin}
-            onChange={(e) => setBudgetMin(e.target.value)}
-            min="0"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-            Budget Max ($/mo)
-          </label>
-          <input
-            type="number"
-            value={budgetMax}
-            onChange={(e) => setBudgetMax(e.target.value)}
-            min="0"
-            className={inputClass}
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Move-in Month
-        </label>
-        <input
-          type="month"
-          value={moveInMonth}
-          onChange={(e) => setMoveInMonth(e.target.value)}
-          className={inputClass}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Dealbreakers
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {DEALBREAKER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => toggleDealbreaker(opt.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                dealbreakers.includes(opt.value)
-                  ? "bg-primary text-background"
-                  : "bg-surface-elevated text-muted hover:bg-card-hover"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Cleanliness
-        </label>
-        <div className="flex gap-1.5">
-          {LEVEL_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setCleanliness(opt.value)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                cleanliness === opt.value
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border bg-card text-muted hover:border-border-subtle"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Sleep Schedule
-        </label>
-        <div className="flex gap-1.5">
-          {SLEEP_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setSleepSchedule(opt.value)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                sleepSchedule === opt.value
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border bg-card text-muted hover:border-border-subtle"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          Guests
-        </label>
-        <div className="flex gap-1.5">
-          {LEVEL_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setGuests(opt.value)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                guests === opt.value
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border bg-card text-muted hover:border-border-subtle"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block font-mono text-xs font-semibold uppercase tracking-wider text-muted-subtle">
-          About Me (optional)
-        </label>
-        <textarea
-          value={aboutMe}
-          onChange={(e) => setAboutMe(e.target.value)}
-          placeholder="A few words about your living preferences..."
-          rows={2}
-          maxLength={200}
-          className={inputClass}
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={!name.trim()}
-        className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
-      >
-        Create Profile & Find Matches
-      </button>
-    </form>
-  );
+/** Shorten long geocoded address (e.g. "Kingston, Eastern Ontario, Ontario, K7L 2Z3, Canada" → "Kingston") */
+function shortLocation(address: string | undefined): string {
+  if (!address?.trim()) return "";
+  const s = address.trim();
+  if (s.length <= 30) return s;
+  const first = s.split(",")[0]?.trim();
+  return first || s.slice(0, 30);
 }
 
-// --- Match Card ---
+export default function RoommatesMapPage() {
+  const [mounted, setMounted] = useState(false);
+  const [roommateListings, setRoommateListings] = useState<Pin[]>([]);
+  const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addPinCoords, setAddPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinFormDefaults, setPinFormDefaults] = useState<{ name?: string; email?: string; budget?: string; move_in_from?: string; notes?: string } | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [addPinError, setAddPinError] = useState<string | null>(null);
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const [aiInsightsRankings, setAiInsightsRankings] = useState<AIRanking[]>([]);
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [aiInsightsError, setAiInsightsError] = useState<string | null>(null);
+  const [aiInsightsHasSearched, setAiInsightsHasSearched] = useState(false);
 
-function MatchCard({
-  match,
-  myProfile,
-}: {
-  match: MatchResult;
-  myProfile: RoommateProfile;
-}) {
-  const { unit } = useApp();
-  const [generatingMessage, setGeneratingMessage] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const scoreColor =
-    match.score >= 75
-      ? "text-fit-great bg-fit-great-bg"
-      : match.score >= 50
-      ? "text-fit-ok bg-fit-ok-bg"
-      : "text-fit-conflict bg-fit-conflict-bg";
+  useEffect(() => {
+    if (!mounted) return;
+    let cancelled = false;
+    fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list: Pin[]) => { if (!cancelled) setRoommateListings(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setRoommateListings([]); });
+    return () => { cancelled = true; };
+  }, [mounted]);
 
-  const topReasons = match.reasons.slice(0, 3);
+  const pins = useMemo(() => {
+    if (!mounted) {
+      return MOCK_ROOMMATES.filter((p) => ROOMMATES_CATEGORIES.includes(p.category));
+    }
+    const ids = new Set(roommateListings.map((p) => p.id));
+    const mock = getRoommatePins().filter((p) => !ids.has(p.id));
+    const combined = [...roommateListings, ...mock];
+    return combined.filter((p) => ROOMMATES_CATEGORIES.includes(p.category) || p.isMe);
+  }, [mounted, roommateListings]);
 
-  async function handleGenerateMessage() {
-    setGeneratingMessage(true);
+  const handlePinClick = useCallback((pin: Pin) => {
+    setSelectedPin(pin);
+    setSelectedProfile(null);
+  }, []);
+
+  const handleMapDoubleClick = useCallback((lat: number, lng: number) => {
+    setAddPinError(null);
+    setAddPinCoords({ lat, lng });
+    fetch("/api/me/profile", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d: { profile?: { full_name?: string; email?: string }; preferences?: { move_in_from?: string; max_rent_cents?: number | null; notes?: string | null } } | null) => {
+        if (!d?.profile && !d?.preferences) return;
+        setPinFormDefaults({
+          name: d.profile?.full_name ?? "",
+          email: d.profile?.email ?? "",
+          budget: d.preferences?.max_rent_cents != null ? String(Math.round(d.preferences.max_rent_cents / 100)) : "",
+          move_in_from: d.preferences?.move_in_from ?? "",
+          notes: d.preferences?.notes ?? "",
+        });
+      })
+      .catch(() => setPinFormDefaults(null));
+  }, []);
+
+  const isDbPinId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  const handleDeletePin = useCallback(async (pin: Pin) => {
+    if (!pin.isMe || !pin.id || !isDbPinId(pin.id)) return;
     try {
-      const res = await fetch("/api/roommate-message", {
+      const res = await fetch(`/api/roommate-listings/${encodeURIComponent(pin.id)}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setSelectedPin(null);
+        setRoommateListings((prev) => prev.filter((p) => p.id !== pin.id));
+        setDeleteMessage("Pin deleted");
+        setTimeout(() => setDeleteMessage(null), 3000);
+        // Refetch with no cache so we get the updated list from the server
+        fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((list: Pin[]) => setRoommateListings(Array.isArray(list) ? list : []))
+          .catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleAddPinSubmit = useCallback(async (pin: Pin) => {
+    const pinType = pin.title.toLowerCase().includes("roommate") ? "need-roommates" : "need-room";
+    const category = pinType === "need-roommates" ? "looking-for-roommates" : "looking-for-room-and-roommate";
+    setAddPinError(null);
+    try {
+      const res = await fetch("/api/roommate-listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          myProfile,
-          theirProfile: match.profile,
+          lat: pin.lat,
+          lng: pin.lng,
+          category,
+          title: pin.title,
+          description: pin.description,
+          contactEmail: pin.contactEmail,
+          address: pin.address,
+          areaLabel: pin.areaLabel,
+          moveInDate: pin.moveInDate,
+          rent: pin.rent,
+          peopleCount: pin.peopleCount,
         }),
       });
-      const data = await res.json();
-      setMessage(data.message);
+      if (res.status === 401) {
+        setAddPinError("Sign in to add a pin.");
+        return;
+      }
+      if (res.ok) {
+        const created = await res.json();
+        setRoommateListings((prev) => [created, ...prev]);
+        setAddPinCoords(null);
+      }
     } catch {
-      setMessage(
-        `Hey ${match.profile.name}! I'm ${myProfile.name}, looking for a roommate around ${myProfile.moveInMonth}. Want to chat?`
-      );
+      // ignore
     }
-    setGeneratingMessage(false);
-  }
+  }, []);
 
-  function handleInvite() {
-    const inviteText = unit
-      ? `Hey ${match.profile.name}! I'm ${myProfile.name} from Pinpoint. We're looking for roommates for our housing unit (${unit.members.length} member${unit.members.length !== 1 ? "s" : ""}, move-in ${unit.moveInMonth}). Join us: ${window.location.origin}/join/${unit.code}`
-      : `Hey ${match.profile.name}! I'm ${myProfile.name} from Pinpoint. Want to team up and look for housing together?`;
-    navigator.clipboard.writeText(inviteText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  const pinsById = useMemo(() => new Map(pins.map((p) => [p.id, p])), [pins]);
 
-  function handleCopyMessage() {
-    if (message) {
-      navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
+  const handleOpenAiInsights = useCallback(() => {
+    setShowAiInsights(true);
+    setAiInsightsError(null);
+  }, []);
+
+  const handleAiSearch = useCallback((query: string) => {
+    setAiInsightsError(null);
+    setAiInsightsRankings([]);
+    setAiInsightsHasSearched(true);
+    setAiInsightsLoading(true);
+    fetch("/api/roommate-listings/ai-insights", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({})) as { rankings?: AIRanking[]; error?: string };
+        if (!res.ok) {
+          setAiInsightsError(res.status === 401 ? "Sign in to use AI match." : (data.error || "Could not load AI insights"));
+          setAiInsightsRankings([]);
+          return;
+        }
+        if (data.error) {
+          setAiInsightsError(data.error);
+          setAiInsightsRankings([]);
+        } else {
+          setAiInsightsRankings(Array.isArray(data.rankings) ? data.rankings : []);
+          setAiInsightsError(null);
+        }
+      })
+      .catch(() => setAiInsightsError("Could not load AI insights"))
+      .finally(() => setAiInsightsLoading(false));
+  }, []);
+
+  const countByCategory = {
+    "looking-for-room-and-roommate":
+      pins.filter((p) => p.category === "looking-for-room-and-roommate" || p.category === "looking-for-roommates").length,
+    "have-room-need-roommates": pins.filter((p) => p.category === "have-room-need-roommates").length,
+    "sublet-room": pins.filter((p) => p.category === "sublet-room").length,
+  };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-foreground">{match.profile.name}</h3>
-          {match.profile.program && (
-            <p className="text-xs text-muted">{match.profile.program}</p>
-          )}
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" data-theme="app">
+      {/* Top bar: compact */}
+      {deleteMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium shadow-lg animate-in fade-in duration-200">
+          {deleteMessage}
         </div>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-bold ${scoreColor}`}
-        >
-          {match.score}% match
-        </span>
-      </div>
-
-      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
-          <span className="block font-semibold text-foreground">${match.profile.budgetMin}–${match.profile.budgetMax}</span>
-          <span className="text-muted-subtle">Budget</span>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
-          <span className="block font-semibold text-foreground">{match.profile.moveInMonth}</span>
-          <span className="text-muted-subtle">Move-in</span>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-1.5 text-center">
-          <span className="block font-semibold text-foreground capitalize">{match.profile.sleepSchedule}</span>
-          <span className="text-muted-subtle">Sleep</span>
-        </div>
-      </div>
-
-      {match.profile.aboutMe && (
-        <p className="mt-2 text-xs text-muted italic">
-          &quot;{match.profile.aboutMe}&quot;
-        </p>
       )}
-
-      <div className="mt-2 space-y-1">
-        {topReasons.map((reason, i) => (
-          <p key={i} className="text-xs text-muted">
-            <span className="mr-1 inline-block">
-              {reason.includes("mismatch") || reason.includes("No ") ? "—" : "+"}
-            </span>
-            {reason}
-          </p>
-        ))}
+      <div className="fixed top-4 z-30 left-20 flex items-center gap-2">
+        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">Roommates</span>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">Double-click map to add yourself</span>
+        <button
+          type="button"
+          onClick={() => setShowSuggestions((s) => !s)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${showSuggestions ? "bg-zinc-700 dark:bg-zinc-600 text-white" : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"}`}
+        >
+          Matches
+        </button>
+        <button
+          type="button"
+          onClick={handleOpenAiInsights}
+          className="rounded-md px-3 py-1.5 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
+        >
+          AI insights
+        </button>
       </div>
+      <div className="fixed top-4 right-14 z-30 flex items-center gap-2">
+        <Link
+          href="/listings/map"
+          className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-sm inline-flex items-center gap-1.5"
+          title="Back to rooms & places map"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Back to listings
+        </Link>
+      </div>
+      <RoommateMapLegend />
 
-      {message && (
-        <div className="mt-3 rounded-lg border border-primary/20 bg-primary-light p-2.5">
-          <p className="text-xs text-foreground whitespace-pre-wrap">{message}</p>
-          <button
-            onClick={handleCopyMessage}
-            className="mt-1.5 text-xs font-medium text-primary hover:underline"
-          >
-            {copied ? "Copied!" : "Copy message"}
-          </button>
+      {/* AI insights sidebar: right side */}
+      {showAiInsights && (
+        <div className="fixed right-0 top-0 bottom-0 z-40">
+          <AIInsightsSidebar
+            onClose={() => setShowAiInsights(false)}
+            rankings={aiInsightsRankings}
+            pinsById={pinsById}
+            onSelectPin={(pin) => { setSelectedPin(pin); setSelectedProfile(null); }}
+            onSearch={handleAiSearch}
+            hasSearched={aiInsightsHasSearched}
+            loading={aiInsightsLoading}
+            error={aiInsightsError}
+          />
         </div>
       )}
 
-      <div className="mt-3 flex gap-2">
-        <button
-          onClick={handleGenerateMessage}
-          disabled={generatingMessage}
-          className="flex-1 rounded-lg bg-primary py-2 text-xs font-semibold text-background transition-colors hover:bg-primary-hover disabled:opacity-50"
-        >
-          {generatingMessage
-            ? "Generating..."
-            : message
-            ? "Regenerate Message"
-            : "Generate Intro Message"}
-        </button>
-        <button
-          onClick={handleInvite}
-          className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-elevated"
-        >
-          {copied ? "Copied!" : "Invite to Unit"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// --- Main Page ---
-
-export default function RoommatesPage() {
-  const { roommateProfiles, myProfileId, addRoommateProfile, setMyProfileId } =
-    useApp();
-
-  const myProfile = useMemo(
-    () => roommateProfiles.find((p) => p.id === myProfileId) ?? null,
-    [roommateProfiles, myProfileId]
-  );
-
-  const matches = useMemo(() => {
-    if (!myProfile) return [];
-    return getTopMatches(myProfile, roommateProfiles);
-  }, [myProfile, roommateProfiles]);
-
-  const handleProfileCreate = useCallback(
-    (profile: RoommateProfile) => {
-      addRoommateProfile(profile);
-      setMyProfileId(profile.id);
-    },
-    [addRoommateProfile, setMyProfileId]
-  );
-
-  return (
-    <div className="min-h-[calc(100vh-49px)] bg-background">
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-foreground">Roommate Matchmaking</h1>
-        <p className="mt-1 text-sm text-muted">
-          Find compatible roommates based on budget, move-in timing, and
-          lifestyle preferences.
-        </p>
-
-        {!myProfile ? (
-          <div className="mt-6">
-            <h2 className="mb-4 text-lg font-semibold text-foreground">
-              Create Your Roommate Profile
-            </h2>
-            <ProfileForm onSubmit={handleProfileCreate} />
+      {/* Suggested matches: only when toggled */}
+      {showSuggestions && (
+        <div className="fixed top-14 z-30 left-20 w-56 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Suggested matches</p>
+            <button type="button" onClick={() => setShowSuggestions(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-sm" aria-label="Close">×</button>
           </div>
-        ) : (
-          <div className="mt-6 space-y-6">
-            {/* My profile summary */}
-            <div className="rounded-xl border border-primary/20 bg-primary-light p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-mono text-xs font-semibold uppercase tracking-wider text-primary">
-                    Your Profile
-                  </p>
-                  <h3 className="text-sm font-bold text-foreground">{myProfile.name}</h3>
-                  {myProfile.program && (
-                    <p className="text-xs text-muted">{myProfile.program}</p>
-                  )}
-                </div>
-                <div className="text-right text-xs text-muted">
-                  <p>${myProfile.budgetMin}–${myProfile.budgetMax}/mo</p>
-                  <p>Move-in: {myProfile.moveInMonth}</p>
-                </div>
-              </div>
-            </div>
+          <ul className="max-h-40 overflow-y-auto">
+            {STUDENT_PROFILES.slice(0, 3).map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedProfile(p); setSelectedPin(null); setShowSuggestions(false); }}
+                  className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                >
+                  {p.name} · {p.budget}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-            {/* Matches */}
-            <div>
-              <h2 className="mb-3 text-lg font-semibold text-foreground">
-                Your Matches ({matches.length})
+      <div className={`pl-16 pt-12 pb-0 transition-[padding] duration-200 ${showAiInsights ? "pr-72" : "pr-0"}`}>
+        <div className="h-[calc(100vh-3rem)] w-full">
+          <MapView
+            pins={pins}
+            onPinClick={handlePinClick}
+            selectedPinId={selectedPin?.id}
+            onMapDoubleClick={handleMapDoubleClick}
+          />
+        </div>
+      </div>
+
+      {selectedPin && (
+        <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl flex flex-col">
+          <div className="p-4 pb-2 shrink-0 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex justify-between items-start gap-3">
+              <h2 className="text-lg font-semibold text-zinc-950 dark:text-white leading-tight">
+                {selectedPin.ownerName
+                  ? `${selectedPin.ownerName}: ${selectedPin.title || "Listing"}`
+                  : selectedPin.title || "Roommate listing"}
               </h2>
-              {matches.length === 0 ? (
-                <p className="text-sm text-muted">
-                  No other profiles found yet. Share Pinpoint with friends!
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {matches.map((match) => (
-                    <MatchCard
-                      key={match.profile.id}
-                      match={match}
-                      myProfile={myProfile}
-                    />
-                  ))}
-                </div>
+              <button
+                onClick={() => setSelectedPin(null)}
+                className="shrink-0 p-1.5 rounded-md text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 pt-3 space-y-4">
+            {selectedPin.description && selectedPin.description.trim() && !/^email\s+to\s+connect\.?$/i.test(selectedPin.description.trim()) && (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">{selectedPin.description}</p>
+            )}
+            <p className="text-sm text-zinc-500">
+              From: {selectedPin.moveInDate}
+              {(selectedPin.areaLabel?.trim() || shortLocation(selectedPin.address)) && (
+                <> · {selectedPin.areaLabel?.trim() || shortLocation(selectedPin.address)}</>
+              )}
+              {selectedPin.rent != null && selectedPin.rent > 0 && (
+                <> · ${selectedPin.rent}/mo</>
+              )}
+            </p>
+            {selectedPin.peopleCount != null && selectedPin.peopleCount > 0 && (
+              <p className="text-sm text-zinc-500">Looking for {selectedPin.peopleCount} roommate{selectedPin.peopleCount !== 1 ? "s" : ""}</p>
+            )}
+            <div className="flex flex-col gap-3 pt-2">
+              {selectedPin.contactEmail && (
+                <a
+                  href={`mailto:${selectedPin.contactEmail}`}
+                  className="inline-block text-center rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  Email to connect
+                </a>
+              )}
+              {selectedPin.isMe && isDbPinId(selectedPin.id) && (
+                <button
+                  type="button"
+                  onClick={() => handleDeletePin(selectedPin)}
+                  className="w-full py-2.5 px-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                >
+                  Delete this pin
+                </button>
               )}
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {selectedProfile && <StudentProfileDetailPanel profile={selectedProfile} onClose={() => setSelectedProfile(null)} />}
+
+      {addPinCoords && (
+        <AddUserPinModal
+          lat={addPinCoords.lat}
+          lng={addPinCoords.lng}
+          onClose={() => { setAddPinCoords(null); setPinFormDefaults(null); setAddPinError(null); }}
+          onSubmit={handleAddPinSubmit}
+          error={addPinError}
+          initialValues={pinFormDefaults ?? undefined}
+        />
+      )}
+
+      <div className="fixed bottom-3 left-20 z-30 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 shadow-sm">
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">{pins.length}</span> people
+        <span className="mx-1.5 text-zinc-400">·</span>
+        <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{countByCategory["looking-for-room-and-roommate"]}</span>
+        <span className="inline-flex items-center gap-1 ml-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />{countByCategory["have-room-need-roommates"]}</span>
+        <span className="inline-flex items-center gap-1 ml-1.5"><span className="w-1.5 h-1.5 rounded-full bg-violet-500" />{countByCategory["sublet-room"]}</span>
       </div>
     </div>
   );
