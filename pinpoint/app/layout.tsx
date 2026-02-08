@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Pinpoint",
-  description: "Housing on the map. Sublets and listings in one place — contact by email.",
+  description: "A coordination layer for group housing. Form your unit, map what fits, and reach out together.",
 };
 
 export default function RootLayout({
