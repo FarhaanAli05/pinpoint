@@ -9,8 +9,10 @@ import type { NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/onboard";
-  const origin = request.nextUrl.origin;
+  const next = searchParams.get("next") ?? "/listings/map";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  const origin = siteUrl || request.nextUrl.origin;
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/signin?error=Could not sign in`, 303);

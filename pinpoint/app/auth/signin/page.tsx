@@ -10,7 +10,7 @@ function SignInContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/onboard";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/listings/map";
   const [isRedirecting, setIsRedirecting] = useState(false);
   const hasCheckedAuth = useRef(false);
 

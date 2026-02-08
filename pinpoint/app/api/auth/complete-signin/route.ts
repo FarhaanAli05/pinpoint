@@ -22,8 +22,10 @@ function toNextCookieOptions(opts: Record<string, unknown> | undefined) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/onboard";
-  const origin = request.nextUrl.origin;
+  const next = searchParams.get("next") ?? "/listings/map";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  const origin = siteUrl || request.nextUrl.origin;
 
   if (!code) {
     return NextResponse.json({ error: "missing_code", redirectUrl: `${origin}/auth/signin?error=Could not sign in` }, { status: 400 });
@@ -59,7 +61,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const path = next.startsWith("/") ? next : `/${next}`;
+  // Sanitize: only allow internal relative paths (no protocol, no double-slash)
+  const isInternal = next.startsWith("/") && !next.startsWith("//") && !next.includes("://");
+  const path = isInternal ? next : "/listings/map";
   const redirectUrl = `${origin}${path}`;
   const res = NextResponse.json({ redirectUrl });
   savedSetCookies.forEach(({ name, value, options }) => {

@@ -130,8 +130,8 @@ export default function PersonProfilePage() {
       <div className="pl-16 py-8">
         <div className="max-w-lg mx-auto px-6">
           <div className="flex items-center gap-4 mb-8">
-            <Link href="/dashboard" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-white text-sm">
-              ← Dashboard
+            <Link href="/listings/map" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-white text-sm">
+              ← Map
             </Link>
           </div>
           <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white mb-1">Your preferences</h1>

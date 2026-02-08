@@ -32,7 +32,7 @@ export default function ProfilePage() {
         setForm({
           full_name: d.profile.full_name ?? "",
           email: d.profile.email ?? "",
-          move_in_from: d.preferences.move_in_from ?? new Date().toISOString().slice(0, 10),
+          move_in_from: d.preferences.move_in_from ?? "",
           max_rent_cents: d.preferences.max_rent_cents != null ? String(Math.round(d.preferences.max_rent_cents / 100)) : "",
           notes: d.preferences.notes ?? "",
         });
@@ -78,8 +78,8 @@ export default function ProfilePage() {
       <div className="pl-16 py-8">
         <div className="max-w-lg mx-auto px-6">
           <div className="flex items-center gap-4 mb-8">
-            <Link href="/dashboard" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-white text-sm">
-              ← Dashboard
+            <Link href="/listings/map" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-white text-sm">
+              ← Map
             </Link>
           </div>
           <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white mb-1">View & edit profile</h1>

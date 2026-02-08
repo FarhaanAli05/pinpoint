@@ -88,13 +88,13 @@ export default function LandingPage() {
         </Link>
         <nav className="flex items-center gap-4">
           <Link
-            href="/auth/signin?callbackUrl=%2Fonboarding"
+            href="/auth/signin?callbackUrl=%2Flistings%2Fmap"
             className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Sign in
           </Link>
           <Link
-            href="/auth/signin?callbackUrl=%2Fonboarding"
+            href="/auth/signin?callbackUrl=%2Flistings%2Fmap"
             className="inline-flex items-center gap-1 rounded-lg bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
           >
             Get started
@@ -134,7 +134,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/auth/signin?callbackUrl=%2Fonboarding"
+              href="/auth/signin?callbackUrl=%2Flistings%2Fmap"
               className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
             >
               Get Started
@@ -313,7 +313,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/auth/signin?callbackUrl=%2Fonboarding"
+              href="/auth/signin?callbackUrl=%2Flistings%2Fmap"
               className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
             >
               Create Your Unit
@@ -337,7 +337,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border py-8 text-center">
         <p className="font-mono text-xs text-muted-subtle">
-          &copy; pinpoint 2026
+          &copy; Pinpoint 2026
         </p>
       </footer>
     </div>

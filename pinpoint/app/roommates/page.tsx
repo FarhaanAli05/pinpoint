@@ -5,9 +5,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getRoommatePins, MOCK_ROOMMATES } from "@/lib/mock-roommates";
 import type { Pin } from "@/lib/types";
-import type { StudentProfile } from "@/lib/student-profiles";
-import { STUDENT_PROFILES } from "@/lib/student-profiles";
-import { StudentProfileDetailPanel } from "@/components/StudentProfileDetailPanel";
 import { RoommateMapLegend } from "@/components/RoommateMapLegend";
 import { AddUserPinModal } from "@/components/AddUserPinModal";
 import { AIInsightsSidebar, type AIRanking } from "@/components/AIInsightsSidebar";
@@ -34,7 +31,6 @@ export default function RoommatesMapPage() {
   const [mounted, setMounted] = useState(false);
   const [roommateListings, setRoommateListings] = useState<Pin[]>([]);
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addPinCoords, setAddPinCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pinFormDefaults, setPinFormDefaults] = useState<{ name?: string; email?: string; budget?: string; move_in_from?: string; notes?: string } | null>(null);
@@ -72,7 +68,6 @@ export default function RoommatesMapPage() {
 
   const handlePinClick = useCallback((pin: Pin) => {
     setSelectedPin(pin);
-    setSelectedProfile(null);
   }, []);
 
   const handleMapDoubleClick = useCallback((lat: number, lng: number) => {
@@ -239,7 +234,7 @@ export default function RoommatesMapPage() {
             onClose={() => setShowAiInsights(false)}
             rankings={aiInsightsRankings}
             pinsById={pinsById}
-            onSelectPin={(pin) => { setSelectedPin(pin); setSelectedProfile(null); }}
+            onSelectPin={(pin) => { setSelectedPin(pin); }}
             onSearch={handleAiSearch}
             hasSearched={aiInsightsHasSearched}
             loading={aiInsightsLoading}
@@ -248,25 +243,30 @@ export default function RoommatesMapPage() {
         </div>
       )}
 
-      {/* Suggested matches: only when toggled */}
+      {/* Nearby roommates: show real pins from the map */}
       {showSuggestions && (
-        <div className="fixed top-14 z-30 left-20 w-56 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+        <div className="fixed top-14 z-30 left-20 w-64 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Suggested matches</p>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nearby roommates</p>
             <button type="button" onClick={() => setShowSuggestions(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-sm" aria-label="Close">×</button>
           </div>
-          <ul className="max-h-40 overflow-y-auto">
-            {STUDENT_PROFILES.slice(0, 3).map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedProfile(p); setSelectedPin(null); setShowSuggestions(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
-                >
-                  {p.name} · {p.budget}
-                </button>
-              </li>
-            ))}
+          <ul className="max-h-52 overflow-y-auto">
+            {pins.filter((p) => !p.isMe).length === 0 ? (
+              <li className="px-3 py-3 text-xs text-zinc-500 dark:text-zinc-400">No roommate listings yet.</li>
+            ) : (
+              pins.filter((p) => !p.isMe).slice(0, 8).map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedPin(p); setShowSuggestions(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                  >
+                    <span className="font-medium">{p.ownerName || p.title}</span>
+                    {p.rent != null && p.rent > 0 && <span className="text-zinc-500"> · ${p.rent}/mo</span>}
+                  </button>
+                </li>
+              ))
+            )}
           </ul>
         </div>
       )}
@@ -338,8 +338,6 @@ export default function RoommatesMapPage() {
           </div>
         </div>
       )}
-
-      {selectedProfile && <StudentProfileDetailPanel profile={selectedProfile} onClose={() => setSelectedProfile(null)} />}
 
       {addPinCoords && (
         <AddUserPinModal

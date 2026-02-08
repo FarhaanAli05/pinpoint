@@ -23,7 +23,7 @@ export async function GET() {
       .from("user_preferences")
       .insert({
         user_id: user.id,
-        move_in_from: new Date().toISOString().slice(0, 10),
+        move_in_from: null,
         max_rent_cents: null,
         notes: null,
       })
@@ -39,12 +39,12 @@ export async function GET() {
     },
     preferences: prefs
       ? {
-          move_in_from: prefs.move_in_from ?? new Date().toISOString().slice(0, 10),
+          move_in_from: prefs.move_in_from ?? null,
           max_rent_cents: prefs.max_rent_cents ?? null,
           notes: prefs.notes ?? null,
         }
       : {
-          move_in_from: new Date().toISOString().slice(0, 10),
+          move_in_from: null,
           max_rent_cents: null,
           notes: null,
         },
@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest) {
     const { error } = await supabase.from("user_preferences").upsert(
       {
         user_id: user.id,
-        move_in_from: move_in_from !== undefined ? move_in_from.slice(0, 10) : existing?.move_in_from ?? new Date().toISOString().slice(0, 10),
+        move_in_from: move_in_from !== undefined ? move_in_from.slice(0, 10) : existing?.move_in_from ?? null,
         max_rent_cents: max_rent_cents !== undefined ? max_rent_cents : existing?.max_rent_cents ?? null,
         notes: notes !== undefined ? (notes?.trim() ?? null) : existing?.notes ?? null,
         updated_at: new Date().toISOString(),
