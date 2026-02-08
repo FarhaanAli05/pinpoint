@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
 /* ── Static data ── */
@@ -32,52 +32,71 @@ const STEPS = [
 const SHOWCASE_FEATURES = [
   { label: "Budget", value: "$600–$900" },
   { label: "Move-in", value: "Sep 2025" },
-  { label: "Fit", value: "Great" },
-  { label: "Members", value: "3" },
+  { label: "Bedrooms", value: "2–4 BR" },
+  { label: "Listings", value: "12" },
 ];
 
 const SHOWCASE_LISTINGS = [
   {
     title: "2BR near Queen's",
     rent: "$850/mo",
-    tag: "Great",
+    tag: "Great fit",
     cls: "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-400/10",
   },
   {
     title: "Studio Downtown",
     rent: "$720/mo",
-    tag: "OK",
-    cls: "text-indigo-700 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-400/10",
+    tag: "OK fit",
+    cls: "text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-400/10",
   },
   {
     title: "4BR Portsmouth",
     rent: "$1,100/mo",
-    tag: "Great",
+    tag: "Great fit",
     cls: "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-400/10",
   },
 ];
 
-const SECTIONS = ["hero", "steps", "showcase"] as const;
+const SECTIONS = [
+  { id: "hero", label: "Top" },
+  { id: "steps", label: "How" },
+  { id: "showcase", label: "Preview" },
+] as const;
 
 /* ── Page ── */
 
 export default function HomePage() {
   const showcaseRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState<string>("hero");
 
-  /* Viewport scroll — rail fade */
-  const { scrollY } = useScroll();
-  const railOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+  /* Track which section is in view */
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    SECTIONS.forEach(({ id }) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setActiveSection(id);
+        },
+        { rootMargin: "-40% 0px -40% 0px", threshold: 0 },
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   /* Showcase parallax */
   const { scrollYProgress: showcaseProgress } = useScroll({
     target: showcaseRef,
     offset: ["start end", "end start"],
   });
-  const showcaseY = useTransform(showcaseProgress, [0, 1], [60, -60]);
+  const showcaseY = useTransform(showcaseProgress, [0, 1], [40, -40]);
   const showcaseScale = useTransform(
     showcaseProgress,
     [0, 0.5, 1],
-    [0.96, 1, 0.98],
+    [0.97, 1, 0.98],
   );
 
   return (
@@ -85,15 +104,14 @@ export default function HomePage() {
       {/* Dot grid background */}
       <div className="dot-grid pointer-events-none fixed inset-0 z-0" />
 
-      {/* ── Left rail cue ── */}
-      <motion.nav
-        style={{ opacity: railOpacity }}
+      {/* ── Section nav (always visible) ── */}
+      <nav
         className="fixed left-20 top-1/2 z-20 hidden -translate-y-1/2 lg:flex"
         aria-label="Page sections"
       >
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-px bg-gradient-to-b from-transparent to-zinc-300 dark:to-zinc-700/50" />
-          {SECTIONS.map((id) => (
+          <div className="h-10 w-px bg-gradient-to-b from-transparent to-zinc-200 dark:to-zinc-800/50" />
+          {SECTIONS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() =>
@@ -101,13 +119,18 @@ export default function HomePage() {
                   .getElementById(id)
                   ?.scrollIntoView({ behavior: "smooth" })
               }
-              className="h-1.5 w-1.5 rounded-full bg-zinc-300 transition-colors hover:bg-zinc-500 dark:bg-zinc-700 dark:hover:bg-zinc-400"
-              aria-label={`Scroll to ${id}`}
+              className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                activeSection === id
+                  ? "scale-125 bg-zinc-900 dark:bg-white"
+                  : "bg-zinc-300 hover:bg-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-500"
+              }`}
+              aria-label={`Scroll to ${label}`}
+              title={label}
             />
           ))}
-          <div className="h-10 w-px bg-gradient-to-b from-zinc-300 to-transparent dark:from-zinc-700/50" />
+          <div className="h-10 w-px bg-gradient-to-b from-zinc-200 to-transparent dark:from-zinc-800/50" />
         </div>
-      </motion.nav>
+      </nav>
 
       {/* ── Hero ── */}
       <section
@@ -117,31 +140,32 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent dark:from-[#0A0A0A] dark:via-[#0A0A0A]/80 dark:to-transparent" />
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="relative z-10 mx-auto max-w-2xl text-center"
         >
-          <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
-            Housing coordination layer
-          </p>
+          {/* <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+            Student housing search
+          </p> */}
 
           <h1 className="mb-6 font-mono text-5xl font-medium leading-[1.08] tracking-tight text-zinc-950 dark:text-white sm:text-7xl">
-            Room &amp; roommates
+            Housing decisions,
             <br />
-            on one map
+            pinpointed.
           </h1>
 
           <p className="mx-auto mb-10 max-w-md text-base leading-relaxed text-zinc-500 dark:text-white/50">
-            Find a place and people to share it with. One flow.
+            Search listings, compare with your group, and reach out to
+            landlords. One place for the whole process.
           </p>
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/auth/signin?callbackUrl=/onboard"
+              href="/listings/map"
               className="group inline-flex h-11 items-center gap-2 rounded-md bg-zinc-900 px-7 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
-              Get started
+              Open map
               <svg
                 width="14"
                 height="14"
@@ -157,21 +181,23 @@ export default function HomePage() {
               </svg>
             </Link>
             <Link
-              href="/listings"
+              href="/auth/signin?callbackUrl=/onboard"
               className="inline-flex h-11 items-center justify-center rounded-md border border-zinc-300 px-7 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-white"
             >
-              Explore demo
+              Sign in to get started
             </Link>
           </div>
 
           <p className="mt-5 text-xs text-zinc-400 dark:text-zinc-600">
-            Already have an account?{" "}
+            Browse listings without an account.
+            {" "}
             <Link
               href="/auth/signin?callbackUrl=/listings"
               className="underline underline-offset-2 transition-colors hover:text-zinc-600 dark:hover:text-zinc-400"
             >
               Sign in
             </Link>
+            {" "}to save, post, and contact.
           </p>
         </motion.div>
 
@@ -190,7 +216,7 @@ export default function HomePage() {
               animate={{ y: [0, 3, 0] }}
               transition={{
                 repeat: Infinity,
-                duration: 2,
+                duration: 2.5,
                 ease: "easeInOut",
               }}
               width="12"
@@ -284,7 +310,7 @@ export default function HomePage() {
                 <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-yellow-500/40" />
                 <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-green-500/40" />
                 <span className="ml-2 font-mono text-[10px] text-zinc-400 dark:text-zinc-600">
-                  pinpoint / map
+                  pinpoint / your unit
                 </span>
               </div>
 
@@ -293,14 +319,14 @@ export default function HomePage() {
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
-                      Your Housing Unit
+                      Housing Unit
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-white">
                       3 members &middot; Sep 2025
                     </p>
                   </div>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono text-[10px] font-medium text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
-                    12 listings
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 font-mono text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    Kingston, ON
                   </span>
                 </div>
 
@@ -320,7 +346,10 @@ export default function HomePage() {
                   ))}
                 </div>
 
-                <div className="mt-3 space-y-1.5">
+                <p className="mt-4 mb-2 font-mono text-[9px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+                  Candidate listings
+                </p>
+                <div className="space-y-1.5">
                   {SHOWCASE_LISTINGS.map((item) => (
                     <div
                       key={item.title}
@@ -361,38 +390,46 @@ export default function HomePage() {
             Ready to coordinate?
           </h2>
           <p className="mb-8 text-sm leading-relaxed text-zinc-500">
-            Set up your housing unit in under a minute. No data stored
-            remotely&nbsp;&mdash; everything stays in your browser.
+            Set up your housing unit in under a minute. Browse listings
+            freely. Sign in to post, save, and contact landlords.
           </p>
-          <Link
-            href="/auth/signin?callbackUrl=/onboard"
-            className="group inline-flex h-11 items-center gap-2 rounded-md bg-zinc-900 px-7 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-          >
-            Create your unit
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="transition-transform group-hover:translate-x-0.5"
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/listings/map"
+              className="group inline-flex h-11 items-center gap-2 rounded-md bg-zinc-900 px-7 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
-          <p className="mt-5 font-mono text-[10px] tracking-wider text-zinc-400 dark:text-zinc-700">
-            No sign-up required &middot; Data stays local
-          </p>
+              Open map
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform group-hover:translate-x-0.5"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href="/auth/signin?callbackUrl=/onboard"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-zinc-300 px-7 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-white"
+            >
+              Create your unit
+            </Link>
+          </div>
+          {/* <p className="mt-5 font-mono text-[10px] tracking-wider text-zinc-400 dark:text-zinc-700">
+            Browsing is free &middot; Sign in to post and contact
+          </p> */}
         </motion.div>
       </section>
 
       {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-zinc-200 py-6 text-center dark:border-zinc-800/60">
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-700">
-          pinpoint &mdash; student housing, together
+          pinpoint &middot; student housing, together
         </p>
       </footer>
     </div>

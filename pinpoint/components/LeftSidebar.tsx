@@ -108,10 +108,9 @@ export function LeftSidebar() {
             onClick={() => doSignOut({ callbackUrl: "/auth/signin" })}
             aria-label="Sign out"
             title="Sign out"
-            className="flex flex-col items-center justify-center gap-0.5 w-12 min-h-[3.5rem] rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors mt-2"
+            className="flex items-center justify-center w-12 h-12 rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors mt-2"
           >
             <LogOutIcon />
-            <span className="text-[10px] font-medium uppercase tracking-wide">Sign out</span>
           </button>
         ) : (
           <Link
@@ -125,13 +124,6 @@ export function LeftSidebar() {
             </svg>
           </Link>
         )}
-        <Link
-          href="/"
-          aria-label="Exit to landing"
-          className="flex items-center justify-center w-12 h-12 rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white transition-colors mt-4"
-        >
-          <LogOutIcon />
-        </Link>
       </div>
     </aside>
   );
