@@ -26,6 +26,11 @@ function circlePolygon(lat: number, lng: number, radiusDeg = BOUNDARY_RADIUS, po
   return out;
 }
 
+/** Boundary polygon around a point (e.g. for listings that have their own lat/lng). */
+export function getBoundaryForPoint(lat: number, lng: number, radiusDeg = BOUNDARY_RADIUS): [number, number][] {
+  return circlePolygon(lat, lng, radiusDeg);
+}
+
 /** Kingston and region area definitions: residential centers + boundary polygon. */
 const AREAS: Record<string, AreaDef> = {
   // Downtown / core

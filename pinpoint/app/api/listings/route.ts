@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { ensureListingCoords } from "@/lib/listings-geocode";
-import { getAreaForAddress } from "@/lib/kingston-areas";
+import { getAreaForAddress, getBoundaryForPoint } from "@/lib/kingston-areas";
 import type { Pin, ListingCategory } from "@/lib/types";
 
 function normalizeCoords(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
@@ -36,16 +36,27 @@ interface PropertyListingJson {
   createdAt?: number;
 }
 
+function isValidCoord(n: unknown): n is number {
+  return typeof n === "number" && !Number.isNaN(n) && n >= -90 && n <= 90;
+}
+function isValidLng(n: unknown): n is number {
+  return typeof n === "number" && !Number.isNaN(n) && n >= -180 && n <= 180;
+}
+
 function jsonToPin(d: PropertyListingJson): Pin | null {
   const address = d.address ?? "";
   const area = getAreaForAddress(address);
+  const useRawCoords = isValidCoord(d.lat) && isValidLng(d.lng);
+  const lat = useRawCoords ? d.lat : area.center.lat;
+  const lng = useRawCoords ? d.lng : area.center.lng;
+  const boundary = useRawCoords ? getBoundaryForPoint(lat, lng) : area.boundary;
   const category: ListingCategory =
     d.type === "whole-unit" ? "share-listing" : "sublet-room";
   return {
     id: d.id,
-    lat: area.center.lat,
-    lng: area.center.lng,
-    boundary: area.boundary,
+    lat,
+    lng,
+    boundary,
     rent: d.rent ?? 0,
     moveInDate: d.moveInDate ?? "2025-09-01",
     type: d.type,

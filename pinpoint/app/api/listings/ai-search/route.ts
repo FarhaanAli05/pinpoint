@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAreaForAddress } from "@/lib/kingston-areas";
+import { getAreaForAddress, getBoundaryForPoint } from "@/lib/kingston-areas";
 import type { Pin, ListingCategory } from "@/lib/types";
 import path from "path";
 import fs from "fs";
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 interface PropertyListingJson {
   id: string;
@@ -27,16 +27,27 @@ interface PropertyListingJson {
   createdAt?: number;
 }
 
+function isValidCoord(n: unknown): n is number {
+  return typeof n === "number" && !Number.isNaN(n) && n >= -90 && n <= 90;
+}
+function isValidLng(n: unknown): n is number {
+  return typeof n === "number" && !Number.isNaN(n) && n >= -180 && n <= 180;
+}
+
 function jsonToPin(d: PropertyListingJson): Pin | null {
   const address = d.address ?? "";
   const area = getAreaForAddress(address);
+  const useRawCoords = isValidCoord(d.lat) && isValidLng(d.lng);
+  const lat = useRawCoords ? d.lat : area.center.lat;
+  const lng = useRawCoords ? d.lng : area.center.lng;
+  const boundary = useRawCoords ? getBoundaryForPoint(lat, lng) : area.boundary;
   const category: ListingCategory =
     d.type === "whole-unit" ? "share-listing" : "sublet-room";
   return {
     id: d.id,
-    lat: area.center.lat,
-    lng: area.center.lng,
-    boundary: area.boundary,
+    lat,
+    lng,
+    boundary,
     rent: d.rent ?? 0,
     moveInDate: d.moveInDate ?? "2025-09-01",
     type: d.type,
@@ -165,18 +176,28 @@ Return a JSON object with a single key "ids" whose value is an array of listing 
     }
 
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
-    let parsed: { ids?: string[] };
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      console.error("[listings/ai-search] Invalid JSON from Gemini", text.slice(0, 200));
-      return NextResponse.json({ error: "Invalid AI response" }, { status: 502 });
-    }
+    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+    // Strip markdown code blocks if present (e.g. ```json ... ```)
+    const codeBlock = text.match(/^```(?:json)?\s*([\s\S]*?)```$/);
+    if (codeBlock) text = codeBlock[1].trim();
+    else if (text.startsWith("```")) text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "").trim();
 
-    const ids = Array.isArray(parsed.ids)
-      ? parsed.ids.filter((id): id is string => typeof id === "string")
-      : [];
+    let ids: string[] = [];
+    try {
+      const parsed = JSON.parse(text) as { ids?: unknown };
+      ids = Array.isArray(parsed.ids)
+        ? parsed.ids.filter((id): id is string => typeof id === "string")
+        : [];
+    } catch {
+      // Fallback: extract pin IDs from response (handles truncated or malformed JSON)
+      const pinIdMatches = text.match(/"pin-\d+"/g);
+      if (pinIdMatches) {
+        ids = pinIdMatches.map((m) => m.replace(/"/g, ""));
+      } else {
+        console.error("[listings/ai-search] Invalid JSON from Gemini", text.slice(0, 300));
+        return NextResponse.json({ error: "Invalid AI response" }, { status: 502 });
+      }
+    }
     const idSet = new Set(pins.map((p) => p.id));
     const listingIds = ids.filter((id) => idSet.has(id));
 
