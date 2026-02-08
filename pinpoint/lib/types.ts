@@ -55,10 +55,14 @@ export interface Pin {
   title: string;
   description: string;
   address: string;
+  /** Postal code (e.g. Canadian "K7L 3V5") */
+  postalCode?: string;
   bedrooms: number;
   features: string[]; // e.g. ["pet-friendly", "smoking-allowed", "quiet"]
   /** For share-listing: original URL they pasted */
   externalLink?: string;
+  /** Image URLs (e.g. from Kijiji) */
+  images?: string[];
   /** Contact — email only */
   contactEmail?: string;
   /** Optional area for looking-for-roommates e.g. "Near Queen's campus" */
@@ -71,6 +75,10 @@ export interface Pin {
   isMe?: boolean;
   /** How many roommates they need or are looking for (from roommate listing) */
   peopleCount?: number;
+  /** Optional polygon [lat, lng][] for area boundary (shown on marker click for listings) */
+  boundary?: [number, number][];
+  /** Lister's display name (from profiles, for roommate listings) */
+  ownerName?: string;
 }
 
 export interface TrackedPin {

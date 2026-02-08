@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
         .then(function(_ref) {
           var ok = _ref.ok, data = _ref.data;
-          var url = data.redirectUrl || (ok ? '/listings' : '/auth/signin?error=Could not sign in');
+          var url = data.redirectUrl || (ok ? '/listings/map' : '/auth/signin?error=Could not sign in');
           window.location.replace(url);
         })
         .catch(function() { window.location.replace('/auth/signin?error=Could not sign in'); });

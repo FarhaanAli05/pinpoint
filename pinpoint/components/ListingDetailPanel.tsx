@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Pin, ListingCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<ListingCategory, string> = {
@@ -34,9 +35,17 @@ const XIcon = () => (
 interface ListingDetailPanelProps {
   pin: Pin;
   onClose: () => void;
+  /** When set and pin.isMe, show a Delete button that calls this */
+  onDelete?: (pin: Pin) => void | Promise<void>;
 }
 
-export function ListingDetailPanel({ pin, onClose }: ListingDetailPanelProps) {
+export function ListingDetailPanel({ pin, onClose, onDelete }: ListingDetailPanelProps) {
+  const [imgIndex, setImgIndex] = useState(0);
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => {
+    setImgIndex(0);
+    setImgError(false);
+  }, [pin.id]);
   const mailto = pin.contactEmail
     ? `mailto:${pin.contactEmail}?subject=Re: ${encodeURIComponent(pin.title)}`
     : null;
@@ -49,7 +58,10 @@ export function ListingDetailPanel({ pin, onClose }: ListingDetailPanelProps) {
             {CATEGORY_LABELS[pin.category]}
           </span>
           <h2 className="text-lg font-semibold text-zinc-950 dark:text-white truncate">{pin.title}</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{pin.areaLabel || pin.address}</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {pin.areaLabel || pin.address}
+            {pin.postalCode ? ` · ${pin.postalCode}` : ""}
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -61,6 +73,69 @@ export function ListingDetailPanel({ pin, onClose }: ListingDetailPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {pin.images && pin.images.length > 0 && (
+          <div className="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 aspect-video relative flex items-center justify-center">
+            {imgError ? (
+              <div className="text-center px-4 py-6">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Image unavailable</p>
+                {pin.externalLink && (
+                  <a href={pin.externalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-amber-600 dark:text-amber-500 hover:underline mt-1 inline-block">
+                    View photos on Kijiji →
+                  </a>
+                )}
+              </div>
+            ) : (
+              <>
+                <img
+                  src={
+                    pin.images[imgIndex]?.startsWith("https://media.kijiji.ca/")
+                      ? `/api/image-proxy?url=${encodeURIComponent(pin.images[imgIndex]!)}`
+                      : pin.images[imgIndex]
+                  }
+                  alt={pin.title}
+                  className="w-full h-full object-cover"
+                  onError={() => setImgError(true)}
+                />
+                {pin.images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setImgIndex((i) => (i > 0 ? i - 1 : pin.images!.length - 1))}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                      aria-label="Previous image"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImgIndex((i) => (i < pin.images!.length - 1 ? i + 1 : 0))}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                      aria-label="Next image"
+                    >
+                      ›
+                    </button>
+                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/50 text-white text-xs">
+                      {imgIndex + 1} / {pin.images.length}
+                    </span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {pin.externalLink && (
+          <a
+            href={pin.externalLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg bg-amber-500 dark:bg-amber-600 text-white font-medium hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+            </svg>
+            View on {pin.sourceLabel || "Kijiji"}
+          </a>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-3">
             <p className="text-xs text-zinc-500 uppercase tracking-wider">Rent</p>
@@ -114,23 +189,10 @@ export function ListingDetailPanel({ pin, onClose }: ListingDetailPanelProps) {
           </div>
         )}
 
-        {pin.externalLink && (
-          <a
-            href={pin.externalLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 py-2.5 px-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
-            </svg>
-            View listing
-          </a>
-        )}
       </div>
 
       {mailto && (
-        <div className="border-t border-zinc-200 dark:border-zinc-800 p-4">
+        <div className="border-t border-zinc-200 dark:border-zinc-800 p-4 space-y-3">
           <a
             href={mailto}
             className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-none border border-zinc-300 dark:border-zinc-700 bg-zinc-900 dark:bg-zinc-900 text-white font-medium hover:bg-zinc-800 transition-colors"
@@ -138,9 +200,21 @@ export function ListingDetailPanel({ pin, onClose }: ListingDetailPanelProps) {
             <MailIcon />
             Email to connect
           </a>
-          <p className="text-xs text-zinc-500 mt-2 text-center truncate">
+          <p className="text-xs text-zinc-500 text-center truncate">
             {pin.contactEmail}
           </p>
+        </div>
+      )}
+
+      {pin.isMe && onDelete && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pin.id) && (
+        <div className="border-t border-zinc-200 dark:border-zinc-800 p-4">
+          <button
+            type="button"
+            onClick={() => onDelete(pin)}
+            className="w-full py-2.5 px-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+          >
+            Delete this pin
+          </button>
         </div>
       )}
     </aside>

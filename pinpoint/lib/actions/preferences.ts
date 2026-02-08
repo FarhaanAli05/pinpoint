@@ -54,6 +54,6 @@ export async function savePreferences(input: SavePreferencesInput): Promise<{ er
 
   revalidatePath("/");
   revalidatePath("/onboard");
-  revalidatePath("/listings");
+  revalidatePath("/listings/map");
   return {};
 }

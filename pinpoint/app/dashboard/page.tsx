@@ -70,6 +70,14 @@ export default function DashboardPage() {
               View full map
             </Link>
             {" · "}
+            <Link href="/dashboard/profile" className="text-zinc-600 dark:text-zinc-400 underline hover:text-zinc-950 dark:hover:text-white">
+              View & edit profile
+            </Link>
+            {" · "}
+            <Link href="/dashboard/person-profile" className="text-zinc-600 dark:text-zinc-400 underline hover:text-zinc-950 dark:hover:text-white">
+              Your preferences
+            </Link>
+            {" · "}
             <Link href="/start" className="text-zinc-600 dark:text-zinc-400 underline hover:text-zinc-950 dark:hover:text-white">
               Full onboarding
             </Link>

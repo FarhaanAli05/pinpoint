@@ -16,8 +16,17 @@ const CATEGORY_LABELS: Record<ListingCategory, string> = {
   "sublet-room": "Subletting a room",
 };
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Glow is subtle: small blur, low opacity. "Me" pin: yellow + person style. */
-function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
+function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean, uniformColor?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
   if (isMe) {
     const scale = selected ? 1.2 : 1;
     const size = Math.round(14 * scale);
@@ -25,6 +34,9 @@ function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: bo
   }
   const scale = selected ? 1.2 : 1;
   const size = Math.round(12 * scale);
+  if (uniformColor) {
+    return { bg: "#14b8a6", glow: "rgba(20,184,166,0.35)", size };
+  }
   if (category === "looking-for-roommates" || category === "looking-for-room-and-roommate") {
     return { bg: "#ef4444", glow: "rgba(239,68,68,0.35)", size };
   }
@@ -46,6 +58,8 @@ interface MapViewProps {
   selectedPinId?: string | null;
   /** Double-click on map to add yourself here */
   onMapDoubleClick?: (lat: number, lng: number) => void;
+  /** Click on map (not on a marker) — e.g. close detail panel and boundaries */
+  onMapClick?: () => void;
   /** Center map on this point (e.g. user's chosen area from onboarding) */
   initialCenter?: { lat: number; lng: number };
   /** Animate zoom-in to initialCenter when provided */
@@ -54,10 +68,12 @@ interface MapViewProps {
   fitBoundsToPins?: boolean;
   /** When set, fly map to this center (e.g. after search) */
   flyToCenter?: { lat: number; lng: number } | null;
+  /** When true, use a single color for all pins (listings view, not roommate categories) */
+  uniformPinColor?: boolean;
 }
 
-function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean) {
-  const { bg, glow, size, isMe: meStyle } = getGlowDotStyle(category, selected, isMe);
+function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean, uniformColor?: boolean) {
+  const { bg, glow, size, isMe: meStyle } = getGlowDotStyle(category, selected, isMe, uniformColor);
   const total = size + 8;
   const blur = 4;
   const spread = 2;
@@ -75,7 +91,7 @@ function createPinIcon(category: ListingCategory, selected: boolean, _isDark: bo
     ">${meStyle ? "me" : ""}</span>
   </div>`;
   return L.divIcon({
-    className: "",
+    className: "pin-marker-icon",
     html,
     iconSize: [total, total],
     iconAnchor: [total / 2, total / 2],
@@ -87,19 +103,25 @@ export default function MapView({
   onPinClick,
   selectedPinId,
   onMapDoubleClick,
+  onMapClick,
   initialCenter,
   animateZoom = false,
   fitBoundsToPins = false,
   flyToCenter,
+  uniformPinColor = false,
 }: MapViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const markersByIdRef = useRef<Map<string, L.Marker>>(new Map());
+  const prevPinsRef = useRef<Pin[]>([]);
+  const boundaryLayerRef = useRef<L.Polygon | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onDoubleClickRef = useRef(onMapDoubleClick);
+  const onMapClickRef = useRef(onMapClick);
   onDoubleClickRef.current = onMapDoubleClick;
+  onMapClickRef.current = onMapClick;
   const center = initialCenter ?? QUEENS_CAMPUS;
 
   useEffect(() => {
@@ -110,14 +132,13 @@ export default function MapView({
       center: [center.lat, center.lng],
       zoom: startZoom,
       zoomControl: true,
+      attributionControl: false,
     });
 
     const tileUrl = isDark
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-    const layer = L.tileLayer(tileUrl, {
-      attribution: "&copy; OpenStreetMap, &copy; CARTO",
-    }).addTo(map);
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
     tileLayerRef.current = layer;
 
     if (onDoubleClickRef.current) {
@@ -126,6 +147,9 @@ export default function MapView({
         onDoubleClickRef.current?.(lat, lng);
       });
     }
+    map.on("click", () => {
+      onMapClickRef.current?.();
+    });
 
     mapRef.current = map;
 
@@ -154,9 +178,7 @@ export default function MapView({
     const tileUrl = isDark
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-    const layer = L.tileLayer(tileUrl, {
-      attribution: "&copy; OpenStreetMap, &copy; CARTO",
-    }).addTo(map);
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
     tileLayerRef.current = layer;
   }, [isDark]);
 
@@ -166,35 +188,80 @@ export default function MapView({
   }, [flyToCenter?.lat, flyToCenter?.lng]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    const map = mapRef.current;
+    if (!map) return;
 
-    const tooltipBg = isDark ? "#18181b" : "#f4f4f5";
-    const tooltipBorder = isDark ? "#27272a" : "#e4e4e7";
-    const tooltipTitle = isDark ? "#fafafa" : "#18181b";
-    const tooltipSub = isDark ? "#a1a1aa" : "#52525b";
+    const prevPins = prevPinsRef.current;
+    const pinsChanged =
+      prevPins.length !== pins.length || pins.some((p, i) => p.id !== prevPins[i]?.id);
+    prevPinsRef.current = pins;
 
-    pins.forEach((pin) => {
-      const isSelected = pin.id === selectedPinId;
-      const isMe = !!pin.isMe;
-      const marker = L.marker([pin.lat, pin.lng], {
-        icon: createPinIcon(pin.category, isSelected, isDark, isMe),
-      })
-        .bindTooltip(
-          `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
-          { direction: "top", offset: [0, -12], className: "!border !text-left" }
-        )
-        .on("click", () => onPinClick(pin))
-        .addTo(mapRef.current!);
-      markersRef.current.push(marker);
-    });
+    if (pinsChanged) {
+      const toRemove = markersByIdRef.current;
+      markersByIdRef.current = new Map();
+      toRemove.forEach((m) => {
+        try {
+          m.off();
+          m.unbindTooltip?.();
+          m.closeTooltip?.();
+          if (map.hasLayer(m)) m.remove();
+        } catch (_) {}
+      });
 
-    if (fitBoundsToPins && pins.length > 0 && mapRef.current) {
-      const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
-      mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      pins.forEach((pin) => {
+        const isSelected = pin.id === selectedPinId;
+        const isMe = !!pin.isMe;
+        const marker = L.marker([pin.lat, pin.lng], {
+          icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
+        })
+          .bindTooltip(
+            `<div class="pin-tooltip__inner"><span class="pin-tooltip__title">${escapeHtml(pin.title)}</span><span class="pin-tooltip__sub">${escapeHtml(isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`)}</span></div>`,
+            { direction: "top", offset: [0, -14], className: `pin-tooltip pin-tooltip--${isDark ? "dark" : "light"}`, sticky: true }
+          )
+          .on("click", (e: L.LeafletMouseEvent) => {
+            L.DomEvent.stopPropagation(e.originalEvent);
+            onPinClick(pin);
+          })
+          .addTo(map);
+        markersByIdRef.current.set(pin.id, marker);
+      });
+    } else {
+      pins.forEach((pin) => {
+        const marker = markersByIdRef.current.get(pin.id);
+        if (marker) {
+          const isSelected = pin.id === selectedPinId;
+          const isMe = !!pin.isMe;
+          marker.setIcon(createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor));
+        }
+      });
     }
-  }, [pins, onPinClick, selectedPinId, isDark, fitBoundsToPins]);
+
+    const boundary = boundaryLayerRef.current;
+    if (boundary && map.hasLayer(boundary)) {
+      boundary.remove();
+    }
+    boundaryLayerRef.current = null;
+
+    const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
+    if (selectedPin?.boundary?.length) {
+      const latlngs = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
+      const fill = isDark ? "rgba(20,184,166,0.12)" : "rgba(20,184,166,0.15)";
+      const stroke = isDark ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.55)";
+      const polygon = L.polygon(latlngs, {
+        color: stroke,
+        weight: 2,
+        fillColor: fill,
+        fillOpacity: 1,
+      }).addTo(map);
+      boundaryLayerRef.current = polygon;
+    }
+  }, [pins, onPinClick, selectedPinId, isDark, uniformPinColor]);
+
+  useEffect(() => {
+    if (!mapRef.current || !fitBoundsToPins || pins.length === 0) return;
+    const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
+    mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [pins, fitBoundsToPins]);
 
   return (
     <div

@@ -102,6 +102,21 @@ export function LeftSidebar() {
         >
           <MapPinIcon />
         </Link>
+        {session && (
+          <Link
+            href="/dashboard/profile"
+            aria-label="View profile"
+            title="View & edit profile"
+            className={`flex items-center justify-center w-12 h-12 rounded-none border transition-colors ${
+              pathname === "/dashboard/profile" ? "border-zinc-400 dark:border-zinc-700 bg-zinc-200 dark:bg-white/10 text-zinc-950 dark:text-white" : "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white"
+            }`}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </Link>
+        )}
         {session ? (
           <button
             type="button"

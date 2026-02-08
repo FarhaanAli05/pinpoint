@@ -16,6 +16,7 @@ import { RoommateMapLegend } from "@/components/RoommateMapLegend";
 import { MapSearchBar } from "@/components/MapSearchBar";
 import { StudentsLikeYouPanel } from "@/components/StudentsLikeYouPanel";
 import { StudentProfileDetailPanel } from "@/components/StudentProfileDetailPanel";
+import { AIInsightsSidebar, type AIRanking } from "@/components/AIInsightsSidebar";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
@@ -47,7 +48,6 @@ export default function MapPage() {
   const { pins, addPin } = useApp();
   const [rentcastPins, setRentcastPins] = useState<Pin[]>([]);
   const [roommateListingsPins, setRoommateListingsPins] = useState<Pin[]>([]);
-  const [mePin, setMePin] = useState<Pin | null>(null);
   const [flyToCenter, setFlyToCenter] = useState<{ lat: number; lng: number } | null>(null);
   const initialCenter = (fromStart || fromFindRoom) && area && AREA_CENTERS[area] ? AREA_CENTERS[area] : undefined;
 
@@ -69,19 +69,10 @@ export default function MapPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/roommate-listings")
+    fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
       .then((res) => (res.ok ? res.json() : []))
       .then((list: Pin[]) => { if (!cancelled) setRoommateListingsPins(Array.isArray(list) ? list : []); })
       .catch(() => { if (!cancelled) setRoommateListingsPins([]); });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/me/pin")
-      .then((res) => res.json())
-      .then((data: { pin: Pin | null }) => { if (!cancelled && data.pin) setMePin(data.pin); })
-      .catch(() => { if (!cancelled) setMePin(null); });
     return () => { cancelled = true; };
   }, []);
 
@@ -89,11 +80,10 @@ export default function MapPage() {
 
   const roommatePins = useMemo(() => {
     const ids = new Set(roommateListingsPins.map((p) => p.id));
-    if (mePin) ids.add(mePin.id);
     const mock = getRoommatePins().filter((p) => !ids.has(p.id));
-    const list = [...roommateListingsPins, ...(mePin ? [mePin] : []), ...mock];
-    return list.filter((p) => ROOMMATES_CATEGORIES.includes(p.category) || (p as Pin & { isMe?: boolean }).isMe);
-  }, [roommateListingsPins, mePin]);
+    const list = [...roommateListingsPins, ...mock];
+    return list.filter((p) => ROOMMATES_CATEGORIES.includes(p.category) || p.isMe);
+  }, [roommateListingsPins]);
 
   const [viewMode, setViewMode] = useState<MapViewMode>(() => {
     if (viewParam === "roommates" || viewParam === "listings") return viewParam;
@@ -102,8 +92,15 @@ export default function MapPage() {
   });
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
   const [addPinCoords, setAddPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinFormDefaults, setPinFormDefaults] = useState<{ name?: string; email?: string; budget?: string; move_in_from?: string; notes?: string } | null>(null);
   const [showMatchesPanel, setShowMatchesPanel] = useState(fromStart || wantRoommates || viewMode === "roommates");
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const [aiInsightsRankings, setAiInsightsRankings] = useState<AIRanking[]>([]);
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [aiInsightsError, setAiInsightsError] = useState<string | null>(null);
+  const [aiInsightsHasSearched, setAiInsightsHasSearched] = useState(false);
 
   useEffect(() => {
     if (viewParam === "roommates" || viewParam === "listings") setViewMode(viewParam);
@@ -126,7 +123,7 @@ export default function MapPage() {
       }
       return list;
     }
-    return roommatePins.filter((p) => ROOMMATES_CATEGORIES.includes(p.category) || (p as Pin & { isMe?: boolean }).isMe);
+    return roommatePins.filter((p) => ROOMMATES_CATEGORIES.includes(p.category) || p.isMe);
   }, [allPins, viewMode, fromFindRoom, area, budgetParam, budgetMin, budgetMax, typeParam, prefsParam, roommatePins]);
 
   const handlePinClick = useCallback((pin: Pin) => {
@@ -135,6 +132,19 @@ export default function MapPage() {
 
   const handleMapDoubleClick = useCallback((lat: number, lng: number) => {
     setAddPinCoords({ lat, lng });
+    fetch("/api/me/profile", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d: { profile?: { full_name?: string; email?: string }; preferences?: { move_in_from?: string; max_rent_cents?: number | null; notes?: string | null } } | null) => {
+        if (!d?.profile && !d?.preferences) return;
+        setPinFormDefaults({
+          name: d.profile?.full_name ?? "",
+          email: d.profile?.email ?? "",
+          budget: d.preferences?.max_rent_cents != null ? String(Math.round(d.preferences.max_rent_cents / 100)) : "",
+          move_in_from: d.preferences?.move_in_from ?? "",
+          notes: d.preferences?.notes ?? "",
+        });
+      })
+      .catch(() => setPinFormDefaults(null));
   }, []);
 
   const handleAddPinSubmit = useCallback(
@@ -156,22 +166,12 @@ export default function MapPage() {
             areaLabel: pin.areaLabel,
             moveInDate: pin.moveInDate,
             rent: pin.rent,
+            peopleCount: pin.peopleCount,
           }),
         });
         if (res.ok) {
           const created = await res.json();
           setRoommateListingsPins((prev) => [created, ...prev]);
-          await fetch("/api/me/pin", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              lat: pin.lat,
-              lng: pin.lng,
-              type: pinType,
-              note: pin.description,
-            }),
-          });
-          setMePin({ ...pin, ...created, id: `me-${created.id}`, isMe: true });
         } else {
           addPin(pin);
         }
@@ -191,15 +191,90 @@ export default function MapPage() {
 
   const handleAddMeHere = useCallback((lat: number, lng: number) => {
     setAddPinCoords({ lat, lng });
+    fetch("/api/me/profile", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d: { profile?: { full_name?: string; email?: string }; preferences?: { move_in_from?: string; max_rent_cents?: number | null; notes?: string | null } } | null) => {
+        if (!d?.profile && !d?.preferences) return;
+        setPinFormDefaults({
+          name: d.profile?.full_name ?? "",
+          email: d.profile?.email ?? "",
+          budget: d.preferences?.max_rent_cents != null ? String(Math.round(d.preferences.max_rent_cents / 100)) : "",
+          move_in_from: d.preferences?.move_in_from ?? "",
+          notes: d.preferences?.notes ?? "",
+        });
+      })
+      .catch(() => setPinFormDefaults(null));
   }, []);
 
-  const leftPadding = showMatchesPanel ? "pl-[calc(4rem+18rem)]" : "pl-16";
-  const rightPadding = selectedPin ? "pr-[min(28rem,100vw)]" : selectedProfile ? "pr-[min(20rem,100vw)]" : "pr-0";
+  const isDbPinId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  const handleDeletePin = useCallback(async (pin: Pin) => {
+    if (!pin.isMe || !pin.id || !isDbPinId(pin.id)) return;
+    try {
+      const res = await fetch(`/api/roommate-listings/${encodeURIComponent(pin.id)}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setSelectedPin(null);
+        setRoommateListingsPins((prev) => prev.filter((p) => p.id !== pin.id));
+        setDeleteMessage("Pin deleted");
+        setTimeout(() => setDeleteMessage(null), 3000);
+        fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((list: Pin[]) => setRoommateListingsPins(Array.isArray(list) ? list : []))
+          .catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const pinsForModeById = useMemo(() => new Map(pinsForMode.map((p) => [p.id, p])), [pinsForMode]);
+  const handleOpenAiInsights = useCallback(() => {
+    setShowAiInsights(true);
+    setAiInsightsError(null);
+  }, []);
+  const handleAiSearch = useCallback((query: string) => {
+    setAiInsightsError(null);
+    setAiInsightsRankings([]);
+    setAiInsightsHasSearched(true);
+    setAiInsightsLoading(true);
+    fetch("/api/roommate-listings/ai-insights", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({})) as { rankings?: AIRanking[]; error?: string };
+        if (!res.ok) {
+          setAiInsightsError(data.error || "Could not load AI insights");
+          setAiInsightsRankings([]);
+          return;
+        }
+        if (data.error) {
+          setAiInsightsError(data.error);
+          setAiInsightsRankings([]);
+        } else {
+          setAiInsightsRankings(Array.isArray(data.rankings) ? data.rankings : []);
+          setAiInsightsError(null);
+        }
+      })
+      .catch(() => setAiInsightsError("Could not load AI insights"))
+      .finally(() => setAiInsightsLoading(false));
+  }, []);
+
+  const leftPadding = showMatchesPanel ? "pl-[22rem]" : "pl-16";
+  const rightPadding = selectedPin ? "pr-[min(28rem,100vw)]" : selectedProfile ? "pr-[min(20rem,100vw)]" : showAiInsights ? "pr-72" : "pr-0";
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" data-theme="app">
-      {/* Top bar: Listings | Roommates + Search (when Roommates) */}
-      <div className="fixed top-4 left-20 z-30 flex flex-wrap items-center gap-2">
+      {deleteMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium shadow-lg animate-in fade-in duration-200">
+          {deleteMessage}
+        </div>
+      )}
+      {/* Top bar: Listings | Roommates + Search (when Roommates) — shift right when sidebars open */}
+      <div
+        className={`fixed top-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${showMatchesPanel ? "left-[22rem]" : "left-20"}`}
+      >
         <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
           <button
             type="button"
@@ -223,12 +298,13 @@ export default function MapPage() {
           onAddMeHere={handleAddMeHere}
         />
         {viewMode === "roommates" && (
-          <Link
-            href="/roommates/add"
-            className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 text-sm font-medium shadow-sm whitespace-nowrap"
+          <button
+            type="button"
+            onClick={handleOpenAiInsights}
+            className="rounded-md px-3 py-2 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
           >
-            Add me to map
-          </Link>
+            AI insights
+          </button>
         )}
       </div>
 
@@ -241,12 +317,28 @@ export default function MapPage() {
         />
       )}
 
+      {showAiInsights && (
+        <div className="fixed right-0 top-0 bottom-0 z-40 w-72">
+          <AIInsightsSidebar
+            onClose={() => setShowAiInsights(false)}
+            rankings={aiInsightsRankings}
+            pinsById={pinsForModeById}
+            onSelectPin={(pin) => { setSelectedPin(pin); setSelectedProfile(null); }}
+            onSearch={handleAiSearch}
+            hasSearched={aiInsightsHasSearched}
+            loading={aiInsightsLoading}
+            error={aiInsightsError}
+          />
+        </div>
+      )}
+
       <div className={`${leftPadding} ${rightPadding} transition-[padding] duration-200`}>
         <div className="h-screen w-full">
           <MapView
             pins={pinsForMode}
             onPinClick={handlePinClick}
             selectedPinId={selectedPin?.id}
+            onMapClick={() => setSelectedPin(null)}
             onMapDoubleClick={handleMapDoubleClick}
             initialCenter={initialCenter}
             animateZoom={!!initialCenter}
@@ -259,6 +351,7 @@ export default function MapPage() {
         <ListingDetailPanel
           pin={selectedPin}
           onClose={() => setSelectedPin(null)}
+          onDelete={handleDeletePin}
         />
       )}
 
@@ -273,8 +366,9 @@ export default function MapPage() {
         <AddUserPinModal
           lat={addPinCoords.lat}
           lng={addPinCoords.lng}
-          onClose={() => setAddPinCoords(null)}
+          onClose={() => { setAddPinCoords(null); setPinFormDefaults(null); }}
           onSubmit={handleAddPinSubmit}
+          initialValues={pinFormDefaults ?? undefined}
         />
       )}
 
@@ -282,23 +376,22 @@ export default function MapPage() {
       {viewMode === "roommates" ? (
         <RoommateMapLegend />
       ) : (
-        <div className="fixed top-4 right-4 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
+        <div className="fixed top-4 right-14 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" /> Sublet</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0" /> Share</span>
         </div>
       )}
 
-      {/* Bottom: count + hint + Add me (roommates) */}
-      <div className="fixed bottom-4 left-20 z-30 flex flex-wrap items-center gap-2">
+      {/* Bottom: count + hint + Add me (roommates) — shift right when sidebars open */}
+      <div
+        className={`fixed bottom-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${
+          showMatchesPanel ? "left-[22rem]" : "left-20"
+        }`}
+      >
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 shadow-sm">
           <span className="font-medium text-zinc-800 dark:text-zinc-200">{pinsForMode.length}</span> {viewMode === "listings" ? "listings" : "people"}
-          {viewMode === "roommates" && " · Double-click map or "}
+          {viewMode === "roommates" && " · Double-click map to add yourself"}
         </div>
-        {viewMode === "roommates" && (
-          <Link href="/roommates/add" className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 text-sm font-medium">
-            Add me
-          </Link>
-        )}
       </div>
     </div>
   );
