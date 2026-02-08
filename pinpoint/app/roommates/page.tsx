@@ -103,8 +103,7 @@ export default function RoommatesMapPage() {
         setRoommateListings((prev) => prev.filter((p) => p.id !== pin.id));
         setDeleteMessage("Pin deleted");
         setTimeout(() => setDeleteMessage(null), 3000);
-        // Refetch with no cache so we get the updated list from the server
-        fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
+do         fetch("/api/roommate-listings", { cache: "no-store", credentials: "include" })
           .then((r) => (r.ok ? r.json() : []))
           .then((list: Pin[]) => setRoommateListings(Array.isArray(list) ? list : []))
           .catch(() => {});
