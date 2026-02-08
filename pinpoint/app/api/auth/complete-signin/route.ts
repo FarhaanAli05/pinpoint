@@ -22,10 +22,8 @@ function toNextCookieOptions(opts: Record<string, unknown> | undefined) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/listings/map";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-  const origin = siteUrl || request.nextUrl.origin;
+  // Always use the request origin so localhost stays localhost and prod stays prod.
+  const origin = request.nextUrl.origin;
 
   if (!code) {
     return NextResponse.json({ error: "missing_code", redirectUrl: `${origin}/auth/signin?error=Could not sign in` }, { status: 400 });
@@ -61,9 +59,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Sanitize: only allow internal relative paths (no protocol, no double-slash)
-  const isInternal = next.startsWith("/") && !next.startsWith("//") && !next.includes("://");
-  const path = isInternal ? next : "/listings/map";
+  // Decide destination: new users → onboarding, returning users → /listings/map
+  let path = "/listings/map";
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!profile?.onboarded_at) {
+        path = "/onboarding";
+      }
+    }
+  } catch {
+    // If profile check fails, default to /listings/map (safe for returning users)
+  }
+
   const redirectUrl = `${origin}${path}`;
   const res = NextResponse.json({ redirectUrl });
   savedSetCookies.forEach(({ name, value, options }) => {
