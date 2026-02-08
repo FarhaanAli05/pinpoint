@@ -8,8 +8,8 @@ import { useSession } from "@/components/SessionProvider";
 export function TopRightProfileLink() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  // Hide on the landing page and when not signed in
-  if (!session || pathname === "/") return null;
+  // Hide on the landing page, auth routes, and when not signed in
+  if (!session || pathname === "/" || pathname.startsWith("/auth")) return null;
 
   const isActive = pathname === "/dashboard/person-profile";
 

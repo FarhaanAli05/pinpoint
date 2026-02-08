@@ -55,7 +55,7 @@ const STEPS = [
 const SHOWCASE_FEATURES = [
   { label: "Budget", value: "$600–$900/mo", color: "text-primary" },
   { label: "Move-in", value: "Sep 2025", color: "text-accent" },
-  { label: "Fit", value: "Great", color: "text-fit-great" },
+  { label: "Bedrooms", value: "2–4 BR", color: "text-fit-great" },
   { label: "Members", value: "3", color: "text-primary" },
 ];
 
@@ -76,6 +76,34 @@ export default function LandingPage() {
     <div ref={containerRef} className="relative min-h-screen overflow-x-hidden">
       {/* Dot-map background */}
       <div className="dot-map-bg pointer-events-none fixed inset-0 z-0" />
+
+      {/* ─── LANDING HEADER ─── */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4">
+        <Link href="/" className="flex items-center gap-2 text-foreground">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span className="font-mono text-sm font-semibold tracking-tight">Pinpoint</span>
+        </Link>
+        <nav className="flex items-center gap-4">
+          <Link
+            href="/auth/signin?callbackUrl=%2Fonboarding"
+            className="text-sm text-muted hover:text-foreground transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/auth/signin?callbackUrl=%2Fonboarding"
+            className="inline-flex items-center gap-1 rounded-lg bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+          >
+            Get started
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </nav>
+      </header>
 
       {/* ─── HERO ─── */}
       <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4">
@@ -110,7 +138,7 @@ export default function LandingPage() {
               className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
             >
               Get Started
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </Link>
@@ -285,11 +313,11 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/onboarding"
+              href="/auth/signin?callbackUrl=%2Fonboarding"
               className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-semibold text-background transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20"
             >
               Create Your Unit
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </Link>
@@ -309,7 +337,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border py-8 text-center">
         <p className="font-mono text-xs text-muted-subtle">
-          pinpoint &middot; student housing, together
+          &copy; pinpoint 2026
         </p>
       </footer>
     </div>
