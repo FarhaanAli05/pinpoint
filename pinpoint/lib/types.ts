@@ -73,6 +73,8 @@ export interface Pin {
   isMe?: boolean;
   /** How many roommates they need or are looking for (from roommate listing) */
   peopleCount?: number;
+  /** Optional polygon [lat, lng][] for area boundary (shown on marker click for listings) */
+  boundary?: [number, number][];
 }
 
 export interface TrackedPin {

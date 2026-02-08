@@ -333,6 +333,7 @@ export default function MapPage() {
             pins={pinsForMode}
             onPinClick={handlePinClick}
             selectedPinId={selectedPin?.id}
+            onMapClick={() => setSelectedPin(null)}
             onMapDoubleClick={handleMapDoubleClick}
             initialCenter={initialCenter}
             animateZoom={!!initialCenter}

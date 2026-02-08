@@ -70,6 +70,7 @@ export default function ListingsMapPage() {
             pins={listings}
             onPinClick={handlePinClick}
             selectedPinId={selectedPin?.id}
+            onMapClick={() => setSelectedPin(null)}
             initialCenter={QUEENS_CAMPUS}
             fitBoundsToPins
             uniformPinColor

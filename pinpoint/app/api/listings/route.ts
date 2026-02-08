@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { ensureListingCoords } from "@/lib/listings-geocode";
+import { getAreaForAddress } from "@/lib/kingston-areas";
 import type { Pin, ListingCategory } from "@/lib/types";
 
 function normalizeCoords(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
@@ -35,21 +36,22 @@ interface PropertyListingJson {
 }
 
 function jsonToPin(d: PropertyListingJson): Pin | null {
-  const coords = normalizeCoords(d.lat, d.lng);
-  if (!coords) return null;
+  const address = d.address ?? "";
+  const area = getAreaForAddress(address);
   const category: ListingCategory =
     d.type === "whole-unit" ? "share-listing" : "sublet-room";
   return {
     id: d.id,
-    lat: coords.lat,
-    lng: coords.lng,
+    lat: area.center.lat,
+    lng: area.center.lng,
+    boundary: area.boundary,
     rent: d.rent ?? 0,
     moveInDate: d.moveInDate ?? "2025-09-01",
     type: d.type,
     category,
     title: d.title ?? "",
     description: d.description ?? "",
-    address: d.address ?? "",
+    address,
     bedrooms: d.bedrooms ?? 1,
     features: Array.isArray(d.features) ? d.features : [],
     externalLink: d.externalLink,

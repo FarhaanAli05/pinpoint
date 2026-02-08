@@ -54,19 +54,27 @@ function getFallbackCoords(query: string): { lat: number; lng: number } {
 /**
  * Ensure a listing has valid lat/lng. Geocodes from address if missing or invalid.
  * Use when ingesting from AI, scrapers, or any source.
+ * Set forceGeocode: true to always re-geocode from address (e.g. batch fix so pins match true locations).
  */
 export async function ensureListingCoords(
   data: ListingData,
-  options?: { rateLimitMs?: number }
+  options?: { rateLimitMs?: number; forceGeocode?: boolean }
 ): Promise<ListingData & { lat: number; lng: number }> {
-  if (hasValidCoords(data)) {
+  const query = extractGeocodeQuery(data);
+  const shouldGeocode = options?.forceGeocode && query.trim().length > 0;
+
+  if (!shouldGeocode && hasValidCoords(data)) {
     const lat = typeof data.lat === "number" ? data.lat : parseFloat(String(data.lat));
     const lng = typeof data.lng === "number" ? data.lng : parseFloat(String(data.lng));
     return { ...data, lat, lng };
   }
 
-  const query = extractGeocodeQuery(data);
   if (!query.trim()) {
+    if (hasValidCoords(data)) {
+      const lat = typeof data.lat === "number" ? data.lat : parseFloat(String(data.lat));
+      const lng = typeof data.lng === "number" ? data.lng : parseFloat(String(data.lng));
+      return { ...data, lat, lng };
+    }
     const fallback = getFallbackCoords(String(data.address || data.title || ""));
     return { ...data, ...fallback };
   }

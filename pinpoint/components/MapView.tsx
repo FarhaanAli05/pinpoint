@@ -49,6 +49,8 @@ interface MapViewProps {
   selectedPinId?: string | null;
   /** Double-click on map to add yourself here */
   onMapDoubleClick?: (lat: number, lng: number) => void;
+  /** Click on map (not on a marker) — e.g. close detail panel and boundaries */
+  onMapClick?: () => void;
   /** Center map on this point (e.g. user's chosen area from onboarding) */
   initialCenter?: { lat: number; lng: number };
   /** Animate zoom-in to initialCenter when provided */
@@ -92,6 +94,7 @@ export default function MapView({
   onPinClick,
   selectedPinId,
   onMapDoubleClick,
+  onMapClick,
   initialCenter,
   animateZoom = false,
   fitBoundsToPins = false,
@@ -103,9 +106,12 @@ export default function MapView({
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const boundaryLayerRef = useRef<L.Polygon | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onDoubleClickRef = useRef(onMapDoubleClick);
+  const onMapClickRef = useRef(onMapClick);
   onDoubleClickRef.current = onMapDoubleClick;
+  onMapClickRef.current = onMapClick;
   const center = initialCenter ?? QUEENS_CAMPUS;
 
   useEffect(() => {
@@ -132,6 +138,9 @@ export default function MapView({
         onDoubleClickRef.current?.(lat, lng);
       });
     }
+    map.on("click", () => {
+      onMapClickRef.current?.();
+    });
 
     mapRef.current = map;
 
@@ -172,12 +181,38 @@ export default function MapView({
   }, [flyToCenter?.lat, flyToCenter?.lng]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    const map = mapRef.current;
+    if (!map) return;
+    const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
 
-    const tooltipBg = isDark ? "#18181b" : "#f4f4f5";
-    const tooltipBorder = isDark ? "#27272a" : "#e4e4e7";
+    const boundary = boundaryLayerRef.current;
+    if (boundary && map.hasLayer(boundary)) {
+      boundary.remove();
+    }
+    boundaryLayerRef.current = null;
+
+    const toRemove = markersRef.current;
+    markersRef.current = [];
+    toRemove.forEach((m) => {
+      try {
+        m.closeTooltip?.();
+        if (map.hasLayer(m)) m.remove();
+      } catch (_) {}
+    });
+
+    if (selectedPin?.boundary?.length) {
+      const latlngs = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
+      const fill = isDark ? "rgba(20,184,166,0.12)" : "rgba(20,184,166,0.15)";
+      const stroke = isDark ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.55)";
+      const polygon = L.polygon(latlngs, {
+        color: stroke,
+        weight: 2,
+        fillColor: fill,
+        fillOpacity: 1,
+      }).addTo(map);
+      boundaryLayerRef.current = polygon;
+    }
+
     const tooltipTitle = isDark ? "#fafafa" : "#18181b";
     const tooltipSub = isDark ? "#a1a1aa" : "#52525b";
 
@@ -191,16 +226,20 @@ export default function MapView({
           `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
           { direction: "top", offset: [0, -12], className: "!border !text-left" }
         )
-        .on("click", () => onPinClick(pin))
-        .addTo(mapRef.current!);
+        .on("click", (e: L.LeafletMouseEvent) => {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          onPinClick(pin);
+        })
+        .addTo(map);
       markersRef.current.push(marker);
     });
+  }, [pins, onPinClick, selectedPinId, isDark, uniformPinColor]);
 
-    if (fitBoundsToPins && pins.length > 0 && mapRef.current) {
-      const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
-      mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-    }
-  }, [pins, onPinClick, selectedPinId, isDark, fitBoundsToPins, uniformPinColor]);
+  useEffect(() => {
+    if (!mapRef.current || !fitBoundsToPins || pins.length === 0) return;
+    const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
+    mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [pins, fitBoundsToPins]);
 
   return (
     <div
