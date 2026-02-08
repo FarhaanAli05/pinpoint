@@ -66,7 +66,10 @@ export default function SignInPage() {
           </svg>
           Sign in with Google
         </button>
-        <Link href="/" className="mt-4 block text-center text-sm text-zinc-500 hover:underline">
+        <Link href="/listings/map" className="mt-4 block text-center text-sm text-zinc-500 hover:underline">
+          Continue without signing in
+        </Link>
+        <Link href="/" className="mt-2 block text-center text-sm text-zinc-500 hover:underline">
           ← Back
         </Link>
       </div>

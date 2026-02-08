@@ -100,6 +100,7 @@ export default function MapPage() {
   const [aiInsightsRankings, setAiInsightsRankings] = useState<AIRanking[]>([]);
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [aiInsightsError, setAiInsightsError] = useState<string | null>(null);
+  const [aiInsightsHasSearched, setAiInsightsHasSearched] = useState(false);
 
   useEffect(() => {
     if (viewParam === "roommates" || viewParam === "listings") setViewMode(viewParam);
@@ -229,9 +230,18 @@ export default function MapPage() {
   const handleOpenAiInsights = useCallback(() => {
     setShowAiInsights(true);
     setAiInsightsError(null);
+  }, []);
+  const handleAiSearch = useCallback((query: string) => {
+    setAiInsightsError(null);
     setAiInsightsRankings([]);
+    setAiInsightsHasSearched(true);
     setAiInsightsLoading(true);
-    fetch("/api/roommate-listings/ai-insights", { method: "POST", credentials: "include" })
+    fetch("/api/roommate-listings/ai-insights", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    })
       .then(async (res) => {
         const data = await res.json().catch(() => ({})) as { rankings?: AIRanking[]; error?: string };
         if (!res.ok) {
@@ -251,13 +261,8 @@ export default function MapPage() {
       .finally(() => setAiInsightsLoading(false));
   }, []);
 
-  const leftPadding =
-    showMatchesPanel && showAiInsights
-      ? "pl-[40rem]"
-      : showMatchesPanel || showAiInsights
-        ? "pl-[22rem]"
-        : "pl-16";
-  const rightPadding = selectedPin ? "pr-[min(28rem,100vw)]" : selectedProfile ? "pr-[min(20rem,100vw)]" : "pr-0";
+  const leftPadding = showMatchesPanel ? "pl-[22rem]" : "pl-16";
+  const rightPadding = selectedPin ? "pr-[min(28rem,100vw)]" : selectedProfile ? "pr-[min(20rem,100vw)]" : showAiInsights ? "pr-72" : "pr-0";
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950" data-theme="app">
@@ -268,9 +273,7 @@ export default function MapPage() {
       )}
       {/* Top bar: Listings | Roommates + Search (when Roommates) — shift right when sidebars open */}
       <div
-        className={`fixed top-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${
-          showMatchesPanel && showAiInsights ? "left-[40rem]" : showMatchesPanel || showAiInsights ? "left-[22rem]" : "left-20"
-        }`}
+        className={`fixed top-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${showMatchesPanel ? "left-[22rem]" : "left-20"}`}
       >
         <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
           <button
@@ -315,12 +318,14 @@ export default function MapPage() {
       )}
 
       {showAiInsights && (
-        <div className={`fixed inset-y-0 z-40 w-72 ${showMatchesPanel ? "left-[22rem]" : "left-16"}`}>
+        <div className="fixed right-0 top-0 bottom-0 z-40 w-72">
           <AIInsightsSidebar
             onClose={() => setShowAiInsights(false)}
             rankings={aiInsightsRankings}
             pinsById={pinsForModeById}
             onSelectPin={(pin) => { setSelectedPin(pin); setSelectedProfile(null); }}
+            onSearch={handleAiSearch}
+            hasSearched={aiInsightsHasSearched}
             loading={aiInsightsLoading}
             error={aiInsightsError}
           />
@@ -371,7 +376,7 @@ export default function MapPage() {
       {viewMode === "roommates" ? (
         <RoommateMapLegend />
       ) : (
-        <div className="fixed top-4 right-4 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
+        <div className="fixed top-4 right-14 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" /> Sublet</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0" /> Share</span>
         </div>
@@ -380,7 +385,7 @@ export default function MapPage() {
       {/* Bottom: count + hint + Add me (roommates) — shift right when sidebars open */}
       <div
         className={`fixed bottom-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${
-          showMatchesPanel && showAiInsights ? "left-[40rem]" : showMatchesPanel || showAiInsights ? "left-[22rem]" : "left-20"
+          showMatchesPanel ? "left-[22rem]" : "left-20"
         }`}
       >
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 shadow-sm">

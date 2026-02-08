@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { AppProvider } from "@/lib/context";
 import { SessionProvider } from "@/components/SessionProvider";
 import { LeftSidebar } from "@/components/LeftSidebar";
+import { TopRightProfileLink } from "@/components/TopRightProfileLink";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <SessionProvider>
             <AppProvider>
               <LeftSidebar />
+              <TopRightProfileLink />
               {children}
             </AppProvider>
           </SessionProvider>

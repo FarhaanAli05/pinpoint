@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAreaForAddress, getBoundaryForPoint } from "@/lib/kingston-areas";
+import { getCoordsForPostalCode, isPointOnLand } from "@/lib/postal-code-areas";
 import type { Pin, ListingCategory } from "@/lib/types";
 import path from "path";
 import fs from "fs";
@@ -37,10 +38,13 @@ function isValidLng(n: unknown): n is number {
 function jsonToPin(d: PropertyListingJson): Pin | null {
   const address = d.address ?? "";
   const area = getAreaForAddress(address);
-  const useRawCoords = isValidCoord(d.lat) && isValidLng(d.lng);
-  const lat = useRawCoords ? d.lat : area.center.lat;
-  const lng = useRawCoords ? d.lng : area.center.lng;
-  const boundary = useRawCoords ? getBoundaryForPoint(lat, lng) : area.boundary;
+  const hasValidCoords = isValidCoord(d.lat) && isValidLng(d.lng);
+  const coordsOnLand = hasValidCoords && isPointOnLand(d.lat, d.lng);
+  const postalCoords = d.postalCode ? getCoordsForPostalCode(d.postalCode, d.id) : null;
+  const useListingCoords = coordsOnLand;
+  const lat = useListingCoords ? d.lat : postalCoords ? postalCoords.lat : area.center.lat;
+  const lng = useListingCoords ? d.lng : postalCoords ? postalCoords.lng : area.center.lng;
+  const boundary = (useListingCoords || postalCoords) ? getBoundaryForPoint(lat, lng) : area.boundary;
   const category: ListingCategory =
     d.type === "whole-unit" ? "share-listing" : "sublet-room";
   return {

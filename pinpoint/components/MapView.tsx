@@ -16,6 +16,15 @@ const CATEGORY_LABELS: Record<ListingCategory, string> = {
   "sublet-room": "Subletting a room",
 };
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Glow is subtle: small blur, low opacity. "Me" pin: yellow + person style. */
 function getGlowDotStyle(category: ListingCategory, selected: boolean, isMe?: boolean, uniformColor?: boolean): { bg: string; glow: string; size: number; isMe?: boolean } {
   if (isMe) {
@@ -123,14 +132,13 @@ export default function MapView({
       center: [center.lat, center.lng],
       zoom: startZoom,
       zoomControl: true,
+      attributionControl: false,
     });
 
     const tileUrl = isDark
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-    const layer = L.tileLayer(tileUrl, {
-      attribution: "&copy; OpenStreetMap, &copy; CARTO",
-    }).addTo(map);
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
     tileLayerRef.current = layer;
 
     if (onDoubleClickRef.current) {
@@ -170,9 +178,7 @@ export default function MapView({
     const tileUrl = isDark
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-    const layer = L.tileLayer(tileUrl, {
-      attribution: "&copy; OpenStreetMap, &copy; CARTO",
-    }).addTo(map);
+    const layer = L.tileLayer(tileUrl, {}).addTo(map);
     tileLayerRef.current = layer;
   }, [isDark]);
 
@@ -189,9 +195,6 @@ export default function MapView({
     const pinsChanged =
       prevPins.length !== pins.length || pins.some((p, i) => p.id !== prevPins[i]?.id);
     prevPinsRef.current = pins;
-
-    const tooltipTitle = isDark ? "#fafafa" : "#18181b";
-    const tooltipSub = isDark ? "#a1a1aa" : "#52525b";
 
     if (pinsChanged) {
       const toRemove = markersByIdRef.current;
@@ -212,8 +215,8 @@ export default function MapView({
           icon: createPinIcon(pin.category, isSelected, isDark, isMe, uniformPinColor),
         })
           .bindTooltip(
-            `<b style="color:${tooltipTitle}">${pin.title}</b><br/><span style="color:${tooltipSub}">${isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`}</span>`,
-            { direction: "top", offset: [0, -12], className: "!border !text-left" }
+            `<div class="pin-tooltip__inner"><span class="pin-tooltip__title">${escapeHtml(pin.title)}</span><span class="pin-tooltip__sub">${escapeHtml(isMe ? "You (pinned location)" : `${CATEGORY_LABELS[pin.category]} · $${pin.rent}/mo`)}</span></div>`,
+            { direction: "top", offset: [0, -14], className: `pin-tooltip pin-tooltip--${isDark ? "dark" : "light"}`, sticky: true }
           )
           .on("click", (e: L.LeafletMouseEvent) => {
             L.DomEvent.stopPropagation(e.originalEvent);

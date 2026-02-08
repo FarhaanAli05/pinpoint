@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Pin } from "@/lib/types";
 
 type UserPinType = "need-room" | "need-roommates";
@@ -20,9 +21,11 @@ interface AddUserPinModalProps {
   onSubmit: (pin: Pin) => void;
   /** Pre-fill from saved profile (fetch from /api/me/profile when opening modal) */
   initialValues?: AddUserPinInitialValues;
+  /** e.g. "Sign in to add a pin" when POST returned 401 */
+  error?: string | null;
 }
 
-export function AddUserPinModal({ lat, lng, onClose, onSubmit, initialValues }: AddUserPinModalProps) {
+export function AddUserPinModal({ lat, lng, onClose, onSubmit, initialValues, error: externalError }: AddUserPinModalProps) {
   const [type, setType] = useState<UserPinType>("need-room");
   const [name, setName] = useState(initialValues?.name ?? "");
   const [email, setEmail] = useState(initialValues?.email ?? "");
@@ -100,6 +103,14 @@ export function AddUserPinModal({ lat, lng, onClose, onSubmit, initialValues }: 
         <p className="text-xs text-zinc-500 mb-4">
           Double-clicked location. Your details will be saved and others can contact you.
         </p>
+        {externalError && (
+          <div className="mb-4 p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 text-sm">
+            {externalError}
+            <Link href="/auth/signin?callbackUrl=/roommates" className="ml-1 underline font-medium hover:no-underline">
+              Sign in
+            </Link>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

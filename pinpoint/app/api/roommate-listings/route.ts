@@ -34,7 +34,8 @@ function rowToPin(
     people_count?: number | null;
     created_at: string;
   },
-  isMe?: boolean
+  isMe?: boolean,
+  ownerName?: string | null
 ): Pin {
   const category = DB_TYPE_TO_CATEGORY[row.listing_type] ?? "looking-for-room-and-roommate";
   const lat = row.lat != null ? Number(row.lat) : 44.231;
@@ -58,20 +59,22 @@ function rowToPin(
     sourceType: "user-added",
     createdAt: new Date(row.created_at).getTime(),
     isMe: !!isMe,
+    ownerName: ownerName?.trim() || undefined,
   };
 }
 
-/** Columns to select — people_count from migration 005; source from 006 */
+/** Columns to select — people_count from 005; source from 006; name if added to table */
 const SELECT_COLUMNS = "id, user_id, listing_type, title, description, address, area_label, lat, lng, move_in_from, move_in_to, rent_cents, contact_email, people_count, created_at";
 
 /**
- * GET: Fetch all roommate listings from DB. Pins belonging to the current user have isMe: true (one user can have multiple pins).
+ * GET: Fetch all roommate listings from DB. Pins belonging to the current user have isMe: true.
+ * Joins profiles to get full_name as ownerName for the detail panel.
  */
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
+    const { data: rows, error } = await supabase
       .from("roommate_listings")
       .select(SELECT_COLUMNS)
       .order("created_at", { ascending: false });
@@ -80,7 +83,20 @@ export async function GET() {
       console.error("[roommate-listings GET]", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    const pins: Pin[] = (data ?? []).map((row) => rowToPin(row, user?.id != null && row.user_id === user.id));
+
+    const list = rows ?? [];
+    const userIds = [...new Set(list.map((r: { user_id: string }) => r.user_id))];
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
+      : { data: [] };
+    const nameByUserId = new Map<string, string>();
+    (profiles ?? []).forEach((p: { id: string; full_name: string | null }) => {
+      if (p?.full_name?.trim()) nameByUserId.set(p.id, p.full_name.trim());
+    });
+
+    const pins: Pin[] = list.map((row: { user_id: string }) =>
+      rowToPin(row, user?.id != null && row.user_id === user.id, nameByUserId.get(row.user_id))
+    );
     return NextResponse.json(pins, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
@@ -143,7 +159,9 @@ export async function POST(request: NextRequest) {
       console.error("[roommate-listings POST]", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json(rowToPin(row, true));
+    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+    const ownerName = profile?.full_name?.trim() ?? null;
+    return NextResponse.json(rowToPin(row, true, ownerName));
   } catch (err) {
     console.error("[roommate-listings POST]", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });

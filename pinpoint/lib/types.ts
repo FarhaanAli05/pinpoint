@@ -77,6 +77,8 @@ export interface Pin {
   peopleCount?: number;
   /** Optional polygon [lat, lng][] for area boundary (shown on marker click for listings) */
   boundary?: [number, number][];
+  /** Lister's display name (from profiles, for roommate listings) */
+  ownerName?: string;
 }
 
 export interface TrackedPin {

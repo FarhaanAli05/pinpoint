@@ -54,7 +54,7 @@ export default function ListingsMapPage() {
           AI search
         </button>
       </div>
-      <div className="fixed top-4 right-4 z-30">
+      <div className="fixed top-4 right-14 z-30">
         <Link href="/roommates" className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-block">
           Roommates map →
         </Link>

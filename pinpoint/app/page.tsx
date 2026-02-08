@@ -19,9 +19,14 @@ export default function HomePage() {
           </span>
           Pinpoint
         </Link>
-        <Link href="/auth/signin?callbackUrl=/onboard" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors">
-          Sign in with Google
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/listings/map" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors">
+            Browse map
+          </Link>
+          <Link href="/auth/signin?callbackUrl=/onboard" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors">
+            Sign in
+          </Link>
+        </div>
       </nav>
 
       <main className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-88px)] px-4 text-center">
@@ -34,17 +39,21 @@ export default function HomePage() {
           Find a place and people to share it with. One flow.
         </p>
         <Link
-          href="/auth/signin?callbackUrl=/onboard"
+          href="/listings/map"
           className="inline-flex items-center gap-2 px-8 py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg font-medium hover:opacity-90 transition-opacity"
         >
-          Get started (Sign in with Google)
+          Browse the map (no sign-in required)
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </Link>
-        <Link href="/auth/signin?callbackUrl=/listings/map" className="mt-4 text-sm text-zinc-500 dark:text-white/50 hover:underline">
-          Already have an account? Sign in
-        </Link>
+        <p className="mt-4 text-sm text-zinc-500 dark:text-white/50">
+          Sign in optional —{" "}
+          <Link href="/auth/signin?callbackUrl=/onboard" className="underline hover:text-zinc-700 dark:hover:text-white/70">
+            sign in with Google
+          </Link>
+          {" "}to add pins, save preferences, and use AI match.
+        </p>
       </main>
     </div>
   );
