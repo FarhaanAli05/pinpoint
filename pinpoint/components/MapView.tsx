@@ -70,6 +70,8 @@ interface MapViewProps {
   flyToCenter?: { lat: number; lng: number } | null;
   /** When true, use a single color for all pins (listings view, not roommate categories) */
   uniformPinColor?: boolean;
+  /** Callback when map is ready, provides zoom control methods */
+  onMapReady?: (controls: { zoomIn: () => void; zoomOut: () => void }) => void;
 }
 
 function createPinIcon(category: ListingCategory, selected: boolean, _isDark: boolean, isMe?: boolean, uniformColor?: boolean) {
@@ -109,6 +111,7 @@ export default function MapView({
   fitBoundsToPins = false,
   flyToCenter,
   uniformPinColor = false,
+  onMapReady,
 }: MapViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -117,9 +120,11 @@ export default function MapView({
   const markersByIdRef = useRef<Map<string, L.Marker>>(new Map());
   const prevPinsRef = useRef<Pin[]>([]);
   const boundaryLayerRef = useRef<L.Polygon | null>(null);
+  const rippleLayersRef = useRef<L.Circle[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const onDoubleClickRef = useRef(onMapDoubleClick);
   const onMapClickRef = useRef(onMapClick);
+  const prevSelectedPinIdRef = useRef<string | null | undefined>(null);
   onDoubleClickRef.current = onMapDoubleClick;
   onMapClickRef.current = onMapClick;
   const center = initialCenter ?? QUEENS_CAMPUS;
@@ -131,7 +136,7 @@ export default function MapView({
     const map = L.map(containerRef.current, {
       center: [center.lat, center.lng],
       zoom: startZoom,
-      zoomControl: true,
+      zoomControl: false, // Disable default zoom controls - we'll add custom ones
       attributionControl: false,
     });
 
@@ -153,6 +158,14 @@ export default function MapView({
 
     mapRef.current = map;
 
+    // Expose zoom controls to parent
+    if (onMapReady) {
+      onMapReady({
+        zoomIn: () => map.zoomIn(),
+        zoomOut: () => map.zoomOut(),
+      });
+    }
+
     if (animateZoom) {
       const t = setTimeout(() => {
         map.flyTo([center.lat, center.lng], 15, { duration: 0.8 });
@@ -165,6 +178,13 @@ export default function MapView({
     }
 
     return () => {
+      // Clean up ripples
+      rippleLayersRef.current.forEach((circle) => {
+        try {
+          if (map.hasLayer(circle)) circle.remove();
+        } catch {}
+      });
+      rippleLayersRef.current = [];
       tileLayerRef.current = null;
       map.remove();
       mapRef.current = null;
@@ -236,24 +256,161 @@ export default function MapView({
       });
     }
 
+    // Clean up previous boundary
     const boundary = boundaryLayerRef.current;
     if (boundary && map.hasLayer(boundary)) {
       boundary.remove();
     }
     boundaryLayerRef.current = null;
 
+    // Clean up previous ripples
+    rippleLayersRef.current.forEach((circle) => {
+      if (map.hasLayer(circle)) circle.remove();
+    });
+    rippleLayersRef.current = [];
+
     const selectedPin = selectedPinId ? pins.find((p) => p.id === selectedPinId) : null;
+    const pinJustSelected = selectedPinId !== prevSelectedPinIdRef.current && selectedPinId != null;
+    prevSelectedPinIdRef.current = selectedPinId;
+
     if (selectedPin?.boundary?.length) {
-      const latlngs = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
+      // Make boundary more circular by approximating as a circle
+      const originalPoints = selectedPin.boundary.map(([lat, lng]) => L.latLng(lat, lng));
+      const center = L.latLng(selectedPin.lat, selectedPin.lng);
+      
+      // Calculate average radius from center to all boundary points
+      let totalDistance = 0;
+      originalPoints.forEach((point) => {
+        totalDistance += center.distanceTo(point);
+      });
+      const avgRadius = totalDistance / originalPoints.length;
+      
+      // Generate a circular boundary with many points (64 points for smooth circle)
+      const smoothedPoints: L.LatLng[] = [];
+      const numPoints = 64;
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * 2 * Math.PI;
+        // Convert radius (meters) to lat/lng offset
+        // 1 degree lat ≈ 111km, 1 degree lng ≈ 111km * cos(lat)
+        const latOffset = (avgRadius / 111000) * Math.cos(angle);
+        const lngOffset = (avgRadius / (111000 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angle);
+        smoothedPoints.push(L.latLng(center.lat + latOffset, center.lng + lngOffset));
+      }
+      
       const fill = isDark ? "rgba(20,184,166,0.12)" : "rgba(20,184,166,0.15)";
       const stroke = isDark ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.55)";
-      const polygon = L.polygon(latlngs, {
+      
+      // Create boundary polygon with smoothed points
+      const polygon = L.polygon(smoothedPoints, {
         color: stroke,
         weight: 2,
         fillColor: fill,
         fillOpacity: 1,
+        smoothFactor: 0, // No simplification - use all points for smoothness
       }).addTo(map);
       boundaryLayerRef.current = polygon;
+
+      // Create ripple effect when pin is clicked - single circle that stays within boundary
+      if (pinJustSelected) {
+        const center = L.latLng(selectedPin.lat, selectedPin.lng);
+        const bounds = L.latLngBounds(smoothedPoints);
+        
+        // Calculate the maximum distance from center to any boundary point
+        let maxDistance = 0;
+        smoothedPoints.forEach((point) => {
+          const distance = center.distanceTo(point);
+          if (distance > maxDistance) maxDistance = distance;
+        });
+        
+        // Use full boundary radius for the circle
+        const maxRadius = maxDistance;
+        const baseRadius = maxRadius * 0.05; // Start very small
+        
+        setTimeout(() => {
+          if (!mapRef.current || selectedPinId !== selectedPin.id) return;
+          
+          const rippleColor = isDark ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.6)";
+          const circle = L.circle(center, {
+            radius: baseRadius,
+            color: rippleColor,
+            weight: 2.5,
+            fillColor: rippleColor,
+            fillOpacity: 0.2,
+            opacity: 0.6,
+          }).addTo(map);
+          
+          rippleLayersRef.current.push(circle);
+          
+          // Phase 1: Quickly expand to full boundary radius (no fade)
+          const expandDuration = 250; // 250ms quick expansion
+          const fadeDuration = 1200; // 1.2 second fade
+          const startTime = Date.now();
+          const initialRadius = baseRadius;
+          
+          const animate = () => {
+            const currentMap = mapRef.current;
+            const currentSelectedId = selectedPinId;
+            
+            if (!currentMap || currentSelectedId !== selectedPin.id) {
+              try {
+                if (map.hasLayer(circle)) circle.remove();
+              } catch {}
+              rippleLayersRef.current = rippleLayersRef.current.filter((c) => c !== circle);
+              return;
+            }
+            
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed < expandDuration) {
+              // Phase 1: Quick expansion to full radius (no fade)
+              const expandProgress = Math.min(elapsed / expandDuration, 1);
+              const easeOut = 1 - Math.pow(1 - expandProgress, 2); // Ease-out quadratic
+              const currentRadius = initialRadius + (maxRadius - initialRadius) * easeOut;
+              
+              try {
+                circle.setRadius(currentRadius);
+                // Keep full opacity during expansion
+                circle.setStyle({
+                  fillOpacity: 0.2,
+                  opacity: 0.6,
+                });
+              } catch (e) {
+                rippleLayersRef.current = rippleLayersRef.current.filter((c) => c !== circle);
+                return;
+              }
+              
+              requestAnimationFrame(animate);
+            } else {
+              // Phase 2: Fade out at full radius
+              const fadeElapsed = elapsed - expandDuration;
+              const fadeProgress = Math.min(fadeElapsed / fadeDuration, 1);
+              const currentOpacity = 0.6 * (1 - fadeProgress);
+              
+              try {
+                circle.setRadius(maxRadius); // Keep at full radius
+                circle.setStyle({
+                  fillOpacity: currentOpacity * 0.33,
+                  opacity: currentOpacity,
+                });
+              } catch (e) {
+                rippleLayersRef.current = rippleLayersRef.current.filter((c) => c !== circle);
+                return;
+              }
+              
+              if (fadeProgress < 1) {
+                requestAnimationFrame(animate);
+              } else {
+                try {
+                  if (map.hasLayer(circle)) circle.remove();
+                } catch {}
+                rippleLayersRef.current = rippleLayersRef.current.filter((c) => c !== circle);
+              }
+            }
+          };
+          
+          requestAnimationFrame(animate);
+        }, 0);
+      }
     }
   }, [pins, onPinClick, selectedPinId, isDark, uniformPinColor]);
 

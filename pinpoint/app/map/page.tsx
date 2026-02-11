@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
+import { Suspense, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useApp } from "@/lib/context";
@@ -100,6 +100,7 @@ function MapPageContent() {
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [aiInsightsError, setAiInsightsError] = useState<string | null>(null);
   const [aiInsightsHasSearched, setAiInsightsHasSearched] = useState(false);
+  const mapInstanceRef = useRef<{ zoomIn: () => void; zoomOut: () => void } | null>(null);
 
   useEffect(() => {
     if (viewParam === "roommates" || viewParam === "listings") setViewMode(viewParam);
@@ -275,18 +276,18 @@ function MapPageContent() {
       <div
         className={`fixed top-4 z-30 flex flex-wrap items-center gap-2 transition-[left] duration-200 ${showMatchesPanel ? "left-[22rem]" : "left-20"}`}
       >
-        <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+        <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shadow-sm overflow-hidden">
           <button
             type="button"
             onClick={() => { setViewMode("listings"); setShowMatchesPanel(false); }}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors ${viewMode === "listings" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${viewMode === "listings" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "text-zinc-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-900"}`}
           >
             Listings
           </button>
           <button
             type="button"
             onClick={() => { setViewMode("roommates"); setShowMatchesPanel(true); }}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 ${viewMode === "roommates" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 ${viewMode === "roommates" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "text-zinc-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-900"}`}
           >
             Roommates
             {viewMode === "roommates" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden />}
@@ -301,12 +302,39 @@ function MapPageContent() {
           <button
             type="button"
             onClick={handleOpenAiInsights}
-            className="rounded-md px-3 py-2 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
+            className="rounded-md px-3 py-2 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors shadow-sm"
           >
             AI insights
           </button>
         )}
 
+      </div>
+
+      {/* Custom zoom controls positioned below the top bar */}
+      <div
+        className={`fixed top-20 z-30 flex flex-col gap-0.5 transition-[left] duration-200 ${showMatchesPanel ? "left-[22rem]" : "left-20"}`}
+      >
+        <button
+          type="button"
+          onClick={() => mapInstanceRef.current?.zoomIn()}
+          className="w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 transition-colors shadow-sm flex items-center justify-center"
+          aria-label="Zoom in"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => mapInstanceRef.current?.zoomOut()}
+          className="w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 transition-colors shadow-sm flex items-center justify-center"
+          aria-label="Zoom out"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
       </div>
 
       {showMatchesPanel && (
@@ -334,7 +362,7 @@ function MapPageContent() {
       )}
 
       <div className={`${leftPadding} ${rightPadding} transition-[padding] duration-200`}>
-        <div className="h-screen w-full">
+        <div className="h-screen w-full -mt-0">
           <MapView
             pins={pinsForMode}
             onPinClick={handlePinClick}
@@ -344,6 +372,9 @@ function MapPageContent() {
             initialCenter={initialCenter}
             animateZoom={!!initialCenter}
             flyToCenter={flyToCenter}
+            onMapReady={(controls) => {
+              mapInstanceRef.current = controls;
+            }}
           />
         </div>
       </div>
@@ -377,7 +408,7 @@ function MapPageContent() {
       {viewMode === "roommates" ? (
         <RoommateMapLegend />
       ) : (
-        <div className="fixed top-4 right-14 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
+        <div className="fixed top-4 right-14 z-30 flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400 shadow-sm">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" /> Sublet</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0" /> Share</span>
         </div>
@@ -389,7 +420,7 @@ function MapPageContent() {
           showMatchesPanel ? "left-[22rem]" : "left-20"
         }`}
       >
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 shadow-sm">
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 shadow-sm">
           <span className="font-medium text-zinc-800 dark:text-zinc-200">{pinsForMode.length}</span> {viewMode === "listings" ? "listings" : "people"}
           {viewMode === "roommates" && " · Double-click map to add yourself"}
         </div>

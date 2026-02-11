@@ -29,8 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
+      <head suppressHydrationWarning>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('pinpoint-theme');document.documentElement.classList.toggle('dark',t!=='light');})();`,
           }}

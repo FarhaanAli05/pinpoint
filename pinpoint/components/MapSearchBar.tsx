@@ -49,7 +49,7 @@ export function MapSearchBar({ onSearch, onAddMeHere, viewMode }: MapSearchBarPr
   if (viewMode !== "roommates") return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-2 z-30">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shadow-sm p-2 z-30">
       <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-1">
         Search location & add yourself
       </p>

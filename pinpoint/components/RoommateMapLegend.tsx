@@ -15,7 +15,7 @@ const ROOMMATE_LEGEND_ITEMS: {
 export function RoommateMapLegend() {
   return (
     <div
-      className="fixed bottom-4 right-4 z-30 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm px-3 py-2.5"
+      className="fixed bottom-4 right-4 z-30 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shadow-sm px-3 py-2.5"
       aria-label="Map legend"
     >
       <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">

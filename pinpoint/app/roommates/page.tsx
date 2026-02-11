@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getRoommatePins, MOCK_ROOMMATES } from "@/lib/mock-roommates";
@@ -41,6 +41,7 @@ export default function RoommatesMapPage() {
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [aiInsightsError, setAiInsightsError] = useState<string | null>(null);
   const [aiInsightsHasSearched, setAiInsightsHasSearched] = useState(false);
+  const mapInstanceRef = useRef<{ zoomIn: () => void; zoomOut: () => void } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -198,19 +199,21 @@ export default function RoommatesMapPage() {
         </div>
       )}
       <div className="fixed top-4 z-30 left-20 flex items-center gap-2">
-        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">Roommates</span>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">Double-click map to add yourself</span>
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shadow-sm px-4 py-2">
+          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">Roommates</span>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Double-click map to add yourself</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowSuggestions((s) => !s)}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${showSuggestions ? "bg-zinc-700 dark:bg-zinc-600 text-white" : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"}`}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors shadow-sm ${showSuggestions ? "bg-zinc-700 dark:bg-zinc-600 text-white" : "bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900"}`}
         >
           Matches
         </button>
         <button
           type="button"
           onClick={handleOpenAiInsights}
-          className="rounded-md px-3 py-1.5 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors"
+          className="rounded-md px-3 py-1.5 text-sm font-medium bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors shadow-sm"
         >
           AI insights
         </button>
@@ -218,12 +221,36 @@ export default function RoommatesMapPage() {
       <div className="fixed top-4 right-14 z-30 flex items-center gap-2">
         <Link
           href="/listings/map"
-          className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-sm inline-flex items-center gap-1.5"
+          className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 shadow-sm inline-flex items-center gap-1.5 transition-colors"
           title="Back to rooms & places map"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           Back to listings
         </Link>
+      </div>
+      {/* Custom zoom controls positioned below the Roommates bar */}
+      <div className="fixed top-20 left-20 z-30 flex flex-col gap-0.5">
+        <button
+          type="button"
+          onClick={() => mapInstanceRef.current?.zoomIn()}
+          className="w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 transition-colors shadow-sm flex items-center justify-center"
+          aria-label="Zoom in"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => mapInstanceRef.current?.zoomOut()}
+          className="w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-900 transition-colors shadow-sm flex items-center justify-center"
+          aria-label="Zoom out"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
       </div>
       <RoommateMapLegend />
 
@@ -245,7 +272,7 @@ export default function RoommatesMapPage() {
 
       {/* Nearby roommates: show real pins from the map */}
       {showSuggestions && (
-        <div className="fixed top-14 z-30 left-20 w-64 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+        <div className="fixed top-20 z-30 left-20 w-64 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nearby roommates</p>
             <button type="button" onClick={() => setShowSuggestions(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-sm" aria-label="Close">×</button>
@@ -271,13 +298,16 @@ export default function RoommatesMapPage() {
         </div>
       )}
 
-      <div className={`pl-16 pt-12 pb-0 transition-[padding] duration-200 ${showAiInsights ? "pr-72" : "pr-0"}`}>
-        <div className="h-[calc(100vh-3rem)] w-full">
+      <div className={`pl-16 transition-[padding] duration-200 ${showAiInsights ? "pr-72" : "pr-0"}`}>
+        <div className="h-screen w-full">
           <MapView
             pins={pins}
             onPinClick={handlePinClick}
             selectedPinId={selectedPin?.id}
             onMapDoubleClick={handleMapDoubleClick}
+            onMapReady={(controls) => {
+              mapInstanceRef.current = controls;
+            }}
           />
         </div>
       </div>
